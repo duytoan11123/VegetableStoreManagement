@@ -1,0 +1,50 @@
+------------------------------------
+
+1. Cấu hình IDE (Eclipse/STS)
+
+------------------------------------
+
+.metadata
+.p2
+.classpath
+.project
+.settings/
+*.launch
+*.sublime-project
+*.sublime-workspace
+
+------------------------------------
+
+2. Files từ Công cụ Build (Gradle)
+
+------------------------------------
+
+/build/
+.gradle/
+!/build/classes/main/
+!/build/classes/java/main/
+
+Loại bỏ các tệp JAR/WAR đã đóng gói
+
+*.jar
+*.war
+*.zip
+*.tar
+*.log
+
+------------------------------------
+
+3. Dữ liệu Java/Lớp
+
+------------------------------------
+
+/bin/
+/out/
+
+Maven target directory (nếu có sử dụng)
+
+/target/
+
+Thư mục cache và dependencies
+
+/dependency-cache/

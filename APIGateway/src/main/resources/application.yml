@@ -1,0 +1,48 @@
+# Cổng cho API Gateway, đây sẽ là cổng truy cập chính từ bên ngoài
+server:
+  port: 8080
+
+# Cấu hình để Gateway tự đăng ký với Eureka và định nghĩa các route
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      # ✅ THÊM KHỐI SERVER VÀ WEBFLUX VÀO ĐÂY
+      server:
+        webflux:
+          routes: # <-- Khối routes của bạn bây giờ nằm sâu hơn
+            # Quy tắc 1: Định tuyến đến Customer service
+            - id: customer-service-route        
+              uri: lb://customer-service      
+              predicates:
+                - Path=/api/customers/**
+                
+            # Quy tắc 2: Định tuyến đến supplier service
+            - id: supplier-service-route       
+              uri: lb://supplier-service        
+              predicates:
+                - Path=/api/suppliers/**
+
+  security:
+      oauth2:
+        resourceserver:
+          jwt:
+            # JWKS URI từ Keycloak của bạn (thay bằng URL bạn đã lưu)
+            jwk-set-uri: "http://localhost:8090/realms/spring-boot-realm/protocol/openid-connect/certs"
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      default-zone: http://localhost:8761/eureka/ # <--- SỬA LỖI 2: Dùng kebab-case cho nhất quán
+  instance:
+    prefer-ip-address: true
+
+# Bật log DEBUG để dễ dàng gỡ lỗi
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG
