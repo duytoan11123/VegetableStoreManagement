@@ -1,48 +1,61 @@
-# Cổng cho API Gateway, đây sẽ là cổng truy cập chính từ bên ngoài
+# Conversion to YAML from Properties formar report
+# Warnings:
+# - The yaml file had comments which are lost in the refactoring!
 server:
   port: 8080
-
-# Cấu hình để Gateway tự đăng ký với Eureka và định nghĩa các route
 spring:
   application:
     name: api-gateway
-
   cloud:
     gateway:
-      # ✅ THÊM KHỐI SERVER VÀ WEBFLUX VÀO ĐÂY
       server:
         webflux:
-          routes: # <-- Khối routes của bạn bây giờ nằm sâu hơn
-            # Quy tắc 1: Định tuyến đến Customer service
-            - id: customer-service-route        
-              uri: lb://customer-service      
-              predicates:
-                - Path=/api/customers/**
-                
-            # Quy tắc 2: Định tuyến đến supplier service
-            - id: supplier-service-route       
-              uri: lb://supplier-service        
-              predicates:
-                - Path=/api/suppliers/**
-
+          routes:
+          - id: customer-service-route
+            uri: lb://customer-service
+            predicates:
+            - Path=/api/customers/**
+          - id: supplier-service-route
+            uri: lb://supplier-service
+            predicates:
+            - Path=/api/suppliers/**
+          - id: inventory-service-route
+            uri: lb://inventory-service
+            predicates:
+            - Path=/api/inventory/**
+            - Path=/api/categories/**
+          - id: order-service-route
+            uri: lb://order-service
+            predicates:
+            - Path=/api/orders/**
+          - id: reporting-service-route
+            uri: lb://reporting-service
+            predicates:
+            - Path=/api/reporting/**
+          - id: payment-service-route
+            uri: lb://payment-service
+            predicates:
+            - Path=/api/payment/**
   security:
-      oauth2:
-        resourceserver:
-          jwt:
-            # JWKS URI từ Keycloak của bạn (thay bằng URL bạn đã lưu)
-            jwk-set-uri: "http://localhost:8090/realms/spring-boot-realm/protocol/openid-connect/certs"
-
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8090/realms/spring-boot-realm/protocol/openid-connect/certs
 eureka:
   client:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      default-zone: http://localhost:8761/eureka/ # <--- SỬA LỖI 2: Dùng kebab-case cho nhất quán
+      default-zone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
-
-# Bật log DEBUG để dễ dàng gỡ lỗi
 logging:
   level:
-    org.springframework.cloud.gateway: DEBUG
-    reactor.netty.http.client: DEBUG
+    org:
+      springframework:
+        cloud:
+          gateway: DEBUG
+    reactor:
+      netty:
+        http:
+          client: DEBUG

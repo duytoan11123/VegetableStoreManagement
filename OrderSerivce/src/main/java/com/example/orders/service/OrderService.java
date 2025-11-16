@@ -45,12 +45,14 @@ public class OrderService {
     @Transactional
     public Order createOrder(CreateOrderRequest request) {
     	Order order = new Order();
-        order.setOrderDate(LocalDateTime.now());
-        order.setStatus(OrderStatus.PENDING); // Trạng thái ban đầu
+        order.setStatus(OrderStatus.PENDING); 
+        order.setPaymentMethod(request.getPaymentMethod());
+        order.setTotalPrice(request.getTotalPrice());
         order.setCustomerId(request.getCustomerId());
+        order.setOrderDate(LocalDateTime.now());
+       
         List<OrderItem> orderItems = new ArrayList<>();
-        double totalAmount = 0;
-
+        double totalPrice = order.getTotalPrice();
         // --- Kiểm tra kho và tính tiền ---
         for (OrderItemRequest itemRequest : request.getItems()) {
             InventoryItemResponse itemDetails = getItemDetailsFromInventory(itemRequest.getProductId());
@@ -60,27 +62,24 @@ public class OrderService {
             }
 
             OrderItem orderItem = new OrderItem();
+            orderItem.setProductName(itemDetails.getName());
             orderItem.setProductId(itemRequest.getProductId());
             orderItem.setQuantity(itemRequest.getQuantity());
-            orderItem.setPriceAtPurchase(itemDetails.getPrice());
+            orderItem.setPricePerUnit(itemDetails.getPrice());
             orderItem.setOrder(order);
             orderItems.add(orderItem);
-
-            totalAmount += (itemDetails.getPrice() * itemRequest.getQuantity());
         }
 
         order.setItems(orderItems);
-        order.setTotalAmount(totalAmount);
         // Lưu đơn hàng PENDING vào CSDL để lấy Order ID
         Order savedOrder = orderRepository.save(order);
-
+        
         // ---Gọi PAYMENT SERVICE ---
         
         PaymentRequest paymentRequest = new PaymentRequest();
         paymentRequest.setOrderId(savedOrder.getId());
-        paymentRequest.setAmount(totalAmount);
-        // (Trong thực tế, token này đến từ frontend)
-        paymentRequest.setPaymentToken(request.getPaymentToken()); // 👈 Giả sử CreateOrderRequest có paymentToken
+        paymentRequest.setTotalPrice(totalPrice);
+        paymentRequest.setPaymentMethod(request.getPaymentMethod()); 
 
         try {
             String paymentUrl = "http://" + paymentService + "/api/payments/process";
@@ -107,19 +106,16 @@ public class OrderService {
                 UpdateStockRequest updateStockRequest = new UpdateStockRequest();
                 updateStockRequest.setNewQuantity(newStock);
 
-                String inventoryUrl = "http://" + inventoryService + "/api/inventory/items/" + item.getProductId() + "/stock";
+                String inventoryUrl = "http://" + inventoryService + "/api/inventory/items/" + item.getProductId()+"/stock";
                 restTemplate.put(inventoryUrl, updateStockRequest);
             }
             
         } catch (Exception e) {
-            // Trừ kho thất bại!
-            // *** HOÀN TIỀN ***
             try {
                 String refundUrl = "http://" + paymentService + "/api/payments/refund";
                 restTemplate.postForObject(refundUrl, new RefundRequest(savedOrder.getId()), PaymentResponse.class);
             } catch (Exception refundException) {
-                // Lỗi nghiêm trọng: Không thể hoàn tiền tự động
-                // (Cần hệ thống cảnh báo admin)
+                System.out.println(refundException.getMessage());
                 savedOrder.setStatus(OrderStatus.FAILED); // Hoặc 1 status đặc biệt
                 orderRepository.save(savedOrder);
                 throw new RuntimeException("Trừ kho thất bại VÀ hoàn tiền tự động thất bại. Cần can thiệp thủ công cho Order ID: " + savedOrder.getId());
@@ -132,11 +128,11 @@ public class OrderService {
 
         // --- THÀNH CÔNG ---
         // Mọi thứ thành công (Payment OK, Inventory OK)
-        savedOrder.setStatus(OrderStatus.PROCESSING); // Đổi từ PENDING sang PROCESSING
+        savedOrder.setStatus(OrderStatus.PAID); // Đổi từ PENDING sang PAID
         
      // --- GỌI CUSTOMER SERVICE (Cộng điểm) ---
-        if (savedOrder.getCustomerId() != null && totalAmount >= 10000) {
-            int pointsToAdd = (int) (totalAmount / 10000);
+        if (savedOrder.getCustomerId() != null && totalPrice >= 10000) {
+            int pointsToAdd = (int) (totalPrice / 10000);
             // Gói DTO (UpdatePointsRequest phải được tạo trong project này)
             UpdatePointsRequest pointsRequest = new UpdatePointsRequest();
             pointsRequest.setPointsToAdd(pointsToAdd);
@@ -189,9 +185,7 @@ public class OrderService {
 
             // 2. Hoàn tiền
             try {
-                // Chỉ hoàn tiền nếu đơn hàng đã được thanh toán thành công
-                // (Tránh hoàn tiền cho đơn PENDING hoặc FAILED)
-                if (order.getStatus() == OrderStatus.PROCESSING || order.getStatus() == OrderStatus.SHIPPED) {
+                if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.SHIPPED) {
                     String refundUrl = "http://" + paymentService + "/api/payments/refund";
                     restTemplate.postForObject(refundUrl, new RefundRequest(order.getId()), PaymentResponse.class);
                 }

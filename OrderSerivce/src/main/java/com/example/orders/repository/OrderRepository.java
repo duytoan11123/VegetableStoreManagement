@@ -11,7 +11,7 @@ import java.time.LocalDateTime; // 👈 Import
 import java.util.List;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
-	@Query("SELECT COALESCE(SUM(o.totalAmount), 0.0) FROM Order o " +
+	@Query("SELECT COALESCE(SUM(o.totalPrice), 0.0) FROM Order o " +
 	           "WHERE o.status != 'CANCELLED' " +
 	           "AND o.orderDate BETWEEN :startDate AND :endDate")
 	    Double getRevenueBetweenDates(

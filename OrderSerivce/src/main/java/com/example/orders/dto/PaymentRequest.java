@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class PaymentRequest {
     private Long orderId;
-    private Double amount;
-    private String paymentToken; // Ví dụ: "tok_visa" hoặc "fail_token"
+    private double totalPrice;
+    private String paymentMethod; // "CASH" hoặc "CARD"
+    private String cardDetails; // (Giả định, có thể là token của Stripe, v.v.)
 }

@@ -4,9 +4,11 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class CreateOrderRequest {
-    // private Long customerId; (Bạn có thể thêm ID khách hàng ở đây)
-    private List<OrderItemRequest> items;
-    private String paymentToken;
+public class CreateOrderRequest{
     private Long customerId;
+    private String paymentMethod;
+    private double totalPrice;
+    private List<OrderItemRequest> items;
+
+
 }

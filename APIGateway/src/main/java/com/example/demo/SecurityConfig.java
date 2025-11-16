@@ -6,6 +6,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -13,6 +17,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.stream.Collectors;
@@ -26,6 +31,7 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http) {
         http
             // 1. Vô hiệu hóa CSRF cho API Gateway (thường là stateless)
+        	.cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
 
             // 2. Cấu hình Quy tắc Phân quyền (Authorization Rules)
@@ -53,7 +59,28 @@ public class SecurityConfig {
 
         return http.build();
     }
+    
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // (QUAN TRỌNG) Chỉ định origin của Next.js
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        
+        // Cho phép tất cả các method (GET, POST, OPTIONS, v.v.)
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        
+        // Cho phép tất cả các header (bao gồm Authorization và Content-Type)
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // (Tùy chọn) Cho phép gửi cookie/credentials (nếu cần)
+        // configuration.setAllowCredentials(true); 
 
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Áp dụng cấu hình này cho tất cả các đường dẫn trên Gateway
+        source.registerCorsConfiguration("/**", configuration); 
+        return source;
+    }
     /**
      * Tùy chỉnh bộ chuyển đổi JWT để trích xuất quyền (GrantedAuthorities/Roles) từ
      * các claim trong JWT. Mặc định, Spring Security tìm kiếm claim "scope" hoặc

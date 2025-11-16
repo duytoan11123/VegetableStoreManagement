@@ -1,10 +1,12 @@
 package com.example.orders.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
+@Table(name = "order_items")
 @Data
 public class OrderItem {
 
@@ -12,12 +14,21 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long productId; // ID của trái cây từ InventoryService
-    private int quantity;
-    private double priceAtPurchase; // Lưu lại giá tại thời điểm mua
+    @Column(nullable = false)
+    private Long productId;
 
-    @ManyToOne
-    @JoinColumn(name = "order_id")
-    @JsonIgnore // Tránh lặp vô hạn khi serialize JSON
+    @Column(nullable = false)
+    private String productName;
+
+    @Column(nullable = false)
+    private int quantity;
+
+    @Column(nullable = false)
+    private double pricePerUnit;
+
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
+    @JsonBackReference
     private Order order;
 }

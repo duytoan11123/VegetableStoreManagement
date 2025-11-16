@@ -1,82 +1,89 @@
 package com.example.demo.controller;
 
-import com.example.demo.model.InventoryItem;
-import com.example.demo.service.InventoryService;
 import com.example.demo.dto.CreateItemRequest;
+import com.example.demo.dto.InventoryResponseDTO;
 import com.example.demo.dto.UpdateStockRequest;
+import com.example.demo.dto.ImportItemDTO;
+import com.example.demo.model.Category; 
+import com.example.demo.service.InventoryService;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping; 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping; 
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
+import java.util.List; 
 
 @RestController
-@RequestMapping("/api/inventory") // Tiền tố chung cho tất cả API kho hàng
+@RequestMapping("/api/inventory")
 public class InventoryController {
 
     @Autowired
     private InventoryService inventoryService;
 
-    /**
-     * Endpoint cho: ThêmTráiCây()
-     * POST /api/inventory/items
-     */
-    @PostMapping("/items")
-    public ResponseEntity<InventoryItem> addFruit(@RequestBody CreateItemRequest request) {
-        InventoryItem newItem = inventoryService.addFruit(request);
-        return new ResponseEntity<>(newItem, HttpStatus.CREATED);
-    }
-
-    /**
-     * Endpoint cho: CậpNhậtTồnKho()
-     * PUT /api/inventory/items/{id}/stock
-     */
-    @PutMapping("/items/{id}/stock")
-    public ResponseEntity<InventoryItem> updateStock(@PathVariable("id") Long id, @RequestBody UpdateStockRequest request) {
-        InventoryItem updatedItem = inventoryService.updateStock(id, request.getNewQuantity());
-        return ResponseEntity.ok(updatedItem);
-    }
-
-    /**
-     * Endpoint cho: KiểmTraTồnKho()
-     * GET /api/inventory/items/{id}/stock
-     */
-    @GetMapping("/items/{id}/stock")
-    public ResponseEntity<Map<String, Object>> checkStock(@PathVariable("id") Long id) {
-        int currentStock = inventoryService.checkStock(id);
+    // ... (getAllItems, getItemDetails, createInventoryItem, getAllCategories, deleteInventoryItem, updateInventoryItem không đổi) ...
+    @GetMapping("/items")
+    public ResponseEntity<Page<InventoryResponseDTO>> getAllItems(
+            @RequestParam(value = "supplierId", required = false) Long supplierId,
+            @RequestParam(value = "search", required = false) String search, 
+            @RequestParam(value = "categoryId", required = false) Long categoryId, 
+            Pageable pageable) { 
         
-        // Trả về JSON rõ ràng
-        Map<String, Object> response = Map.of(
-            "id", id,
-            "quantity", currentStock
-        );
-        return ResponseEntity.ok(response);
+        Page<InventoryResponseDTO> itemsPage;
+        if (supplierId != null) {
+            itemsPage = inventoryService.getItemsBySupplier(supplierId, search, categoryId, pageable);
+        } else {
+            itemsPage = inventoryService.getAllItems(search, categoryId, pageable);
+        }
+        return ResponseEntity.ok(itemsPage);
+    }
+    @GetMapping("/items/{id}")
+    public ResponseEntity<InventoryResponseDTO> getItemDetails(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(inventoryService.getItemDetails(id));
+    }
+    @PostMapping("/items")
+    public ResponseEntity<InventoryResponseDTO> createInventoryItem(@RequestBody CreateItemRequest request) {
+        InventoryResponseDTO newItemDTO = inventoryService.addFruit(request);
+        return new ResponseEntity<>(newItemDTO, HttpStatus.CREATED);
     }
 
-    /**
-     * (Bonus) Endpoint để lấy toàn bộ thông tin mặt hàng
-     * GET /api/inventory/items/{id}
-     */
-    @GetMapping("/items/{id}")
-    public ResponseEntity<InventoryItem> getItemDetails(@PathVariable("id") Long id) {
-        InventoryItem item = inventoryService.getItemDetails(id);
-        return ResponseEntity.ok(item);
+    @DeleteMapping("/items/{id}")
+    public ResponseEntity<Void> deleteInventoryItem(@PathVariable("id") Long id) {
+        inventoryService.deleteItem(id);
+        return ResponseEntity.ok().build(); 
+    }
+    @PutMapping("/items/{id}")
+    public ResponseEntity<InventoryResponseDTO> updateInventoryItem(
+            @PathVariable("id") Long id, 
+            @RequestBody CreateItemRequest request) 
+    {
+        InventoryResponseDTO updatedItemDTO = inventoryService.updateItem(id, request);
+        return ResponseEntity.ok(updatedItemDTO);
+    }
+
+    @PostMapping("/import-stock")
+    public ResponseEntity<Void> importStock(@RequestBody List<ImportItemDTO> itemsToImport) {
+        inventoryService.importStock(itemsToImport);
+        return ResponseEntity.ok().build();
     }
     
-    @GetMapping("/items")
-    public ResponseEntity<List<InventoryItem>> getAllItems(
-            @RequestParam(name = "supplierId", required = false) Long supplierId) {
-        
-        if (supplierId != null) {
-            // Nếu có supplierId, lọc theo nó
-            List<InventoryItem> items = inventoryService.getItemsBySupplier(supplierId);
-            return ResponseEntity.ok(items);
-        } else {
-            List<InventoryItem> allItems = inventoryService.getAllItem();
-            return ResponseEntity.ok(allItems);
-        }
+    @PutMapping("/items/{id}/stock")
+    public ResponseEntity<Void> updateStock(
+            @PathVariable("id") Long id, 
+            @RequestBody UpdateStockRequest request) 
+    {
+        inventoryService.updateStock(id, request);
+        return ResponseEntity.ok().build();
     }
 }
