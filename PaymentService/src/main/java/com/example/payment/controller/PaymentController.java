@@ -21,8 +21,11 @@ public class PaymentController {
      */
     @PostMapping("/process")
     public ResponseEntity<PaymentResponse> processPayment(@RequestBody PaymentRequest request) {
-        // (Trong OrderService, bạn sẽ phải dùng try-catch khi gọi API này)
         PaymentResponse response = paymentService.processPayment(request);
+        
+        if ("FAILED".equals(response.getStatus().toString())) {
+            return ResponseEntity.badRequest().body(response);
+        }
         return ResponseEntity.ok(response);
     }
 

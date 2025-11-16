@@ -1,81 +1,204 @@
 package com.example.demo.service;
 
-import com.example.demo.model.InventoryItem;
-import com.example.demo.repository.InventoryRepository;
 import com.example.demo.dto.CreateItemRequest;
-import com.example.demo.exception.ItemNotFoundException;
+import com.example.demo.dto.InventoryResponseDTO;
+import com.example.demo.dto.UpdateStockRequest;
+import com.example.demo.dto.ImportItemDTO; 
+import com.example.demo.model.Category;
+import com.example.demo.model.InventoryItem;
+import com.example.demo.model.STATUS;
+import com.example.demo.model.ImportHistory; // 👈 (THÊM MỚI)
+import com.example.demo.repository.CategoryRepository;
+import com.example.demo.repository.InventoryRepository;
+import com.example.demo.repository.ImportHistoryRepository; // 👈 (THÊM MỚI)
 
-import java.util.List;
-
+import jakarta.persistence.EntityNotFoundException; 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant; // 👈 (THÊM MỚI)
+import java.util.ArrayList; // 👈 (THÊM MỚI)
+import java.util.List; 
+import java.util.Map; 
+import java.util.stream.Collectors; 
 
 @Service
+@Transactional 
 public class InventoryService {
 
     @Autowired
     private InventoryRepository inventoryRepository;
-
-    /**
-     * 1. Logic cho: ThêmTráiCây()
-     * Tạo một mặt hàng trái cây mới trong kho.
-     */
-    public InventoryItem addFruit(CreateItemRequest request) {
-        // Kiểm tra xem trái cây đã tồn tại chưa (dựa vào tên)
+    @Autowired
+    private CategoryRepository categoryRepository; 
+    @Autowired
+    private ImportHistoryRepository importHistoryRepository; 
+    
+    @Transactional(readOnly = true) 
+    public Page<InventoryResponseDTO> getAllItems(String search, Long categoryId, Pageable pageable) {
+        Page<InventoryItem> inventoryData = inventoryRepository.findAllWithCategory(search, categoryId, pageable);
+        return inventoryData.map(this::mapToInventoryDTO);
+    }
+    
+    @Transactional(readOnly = true)
+    public Page<InventoryResponseDTO> getItemsBySupplier(Long supplierId, String search, Long categoryId, Pageable pageable) {
+        Page<InventoryItem> inventoryData = inventoryRepository.findBySupplierIdWithCategory(supplierId, search, categoryId, pageable);
+        return inventoryData.map(this::mapToInventoryDTO);
+    }
+    
+    @Transactional(readOnly = true)
+    public InventoryResponseDTO getItemDetails(Long id) {
+        return inventoryRepository.findByIdWithCategory(id)
+            .map(this::mapToInventoryDTO) 
+            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy InventoryItem với ID: " + id));
+    }
+    
+    @Transactional(readOnly = true)
+    public Category getCategory(Long id) {
+        return categoryRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Category với ID: " + id));
+    }
+    
+    @Transactional(readOnly = true)
+    public List<Category> getAllCategories() {
+        return categoryRepository.findAll();
+    }
+    
+    @Transactional
+    public InventoryResponseDTO addFruit(CreateItemRequest request) {
         if (inventoryRepository.findByName(request.getName()).isPresent()) {
             throw new IllegalArgumentException("Trái cây với tên '" + request.getName() + "' đã tồn tại.");
         }
-        if (request.getSupplierId() == null) { 
-            throw new IllegalArgumentException("Cần phải có supplierId để thêm mặt hàng.");
-       }
+        Category category = getCategory(request.getCategoryId());
         InventoryItem newItem = new InventoryItem();
         newItem.setName(request.getName());
         newItem.setQuantity(request.getQuantity());
         newItem.setPrice(request.getPrice());
         newItem.setSupplierId(request.getSupplierId());
-        return inventoryRepository.save(newItem);
-    }
-
-    /**
-     * 2. Logic cho: CậpNhậtTồnKho()
-     * Cập nhật số lượng tồn kho cho một mặt hàng đã có.
-     */
-    public InventoryItem updateStock(Long id, int newQuantity) {
-        // Tìm mặt hàng theo ID, nếu không thấy thì ném lỗi
-        InventoryItem item = inventoryRepository.findById(id)
-                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy mặt hàng với ID: " + id));
-
-        // Cập nhật số lượng mới
-        item.setQuantity(newQuantity);
+        if (request.getQuantity() ==0) {
+        	newItem.setStatus(STATUS.SOLDOUT);
+        }
+        if (request.getQuantity() < 50) {
+            newItem.setStatus(STATUS.LOW);
+        } else {
+            newItem.setStatus(STATUS.AVAILABLE);
+        }
         
-        // Lưu lại vào CSDL
-        return inventoryRepository.save(item);
+        category.addItem(newItem); 
+        InventoryItem savedItem = inventoryRepository.save(newItem);
+        return mapToInventoryDTO(savedItem);
+    }
+    
+    @Transactional
+    public void deleteItem(Long id) {
+        if (!inventoryRepository.existsById(id)) {
+            throw new EntityNotFoundException("Không tìm thấy Item để xóa với ID: " + id);
+        }
+        inventoryRepository.deleteById(id);
+    }
+    
+    @Transactional
+    public InventoryResponseDTO updateItem(Long id, CreateItemRequest request) {
+        InventoryItem itemToUpdate = inventoryRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Item để cập nhật với ID: " + id));
+        Category category = getCategory(request.getCategoryId());
+        itemToUpdate.setName(request.getName());
+        itemToUpdate.setQuantity(request.getQuantity());
+        itemToUpdate.setPrice(request.getPrice());
+        itemToUpdate.setSupplierId(request.getSupplierId());
+        itemToUpdate.setCategory(category); 
+        if (request.getQuantity() ==0) {
+             itemToUpdate.setStatus(STATUS.SOLDOUT);
+        } else if (request.getQuantity() < 50) {
+            itemToUpdate.setStatus(STATUS.LOW);
+        } else {
+            itemToUpdate.setStatus(STATUS.AVAILABLE);
+        }
+        InventoryItem updatedItem = inventoryRepository.save(itemToUpdate);
+        return mapToInventoryDTO(updatedItem);
     }
 
-    /**
-     * 3. Logic cho: KiểmTraTồnKho()
-     * Lấy số lượng tồn kho hiện tại của một mặt hàng.
-     */
-    public int checkStock(Long id) {
-        InventoryItem item = inventoryRepository.findById(id)
-                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy mặt hàng với ID: " + id));
+   
+    @Transactional
+    public void importStock(List<ImportItemDTO> itemsToImport) {
+        List<Long> itemIds = itemsToImport.stream()
+                                          .map(ImportItemDTO::itemId)
+                                          .collect(Collectors.toList());
+        
+        List<InventoryItem> itemsInDb = inventoryRepository.findAllById(itemIds);
+        Map<Long, InventoryItem> itemMap = itemsInDb.stream()
+            .collect(Collectors.toMap(InventoryItem::getId, item -> item));
+        
+        // (THÊM MỚI) Tạo danh sách lịch sử
+        List<ImportHistory> historyList = new ArrayList<>();
 
-        return item.getQuantity();
+        for (ImportItemDTO importItem : itemsToImport) {
+            InventoryItem item = itemMap.get(importItem.itemId());
+            if (item != null) {
+                // 1. Cập nhật Item
+                int newQuantity = item.getQuantity() + importItem.quantityToAdd();
+                item.setQuantity(newQuantity);
+                item.setPrice(importItem.price()); 
+                
+                if (newQuantity ==0) {
+                    item.setStatus(STATUS.SOLDOUT);
+                } else if (newQuantity < 50) {
+                    item.setStatus(STATUS.LOW);
+                } else {
+                    item.setStatus(STATUS.AVAILABLE);
+                }
+                
+                // 2. (THÊM MỚI) Tạo bản ghi Lịch sử
+                ImportHistory history = new ImportHistory();
+                history.setItemId(item.getId());
+                history.setSupplierId(item.getSupplierId());
+                history.setQuantityAdded(importItem.quantityToAdd());
+                history.setPricePerUnit(importItem.price());
+                history.setImportDate(Instant.now());
+                historyList.add(history);
+            } 
+        }
+        
+
+        inventoryRepository.saveAll(itemsInDb);
+        importHistoryRepository.saveAll(historyList); 
     }
     
-    /**
-     * (Bonus) Hàm tìm kiếm thông tin đầy đủ của một mặt hàng
-     */
-    public InventoryItem getItemDetails(Long id) {
-        return inventoryRepository.findById(id)
-                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy mặt hàng với ID: " + id));
+    public InventoryItem updateStock(Long id, UpdateStockRequest request) {
+		InventoryItem item = inventoryRepository.findById(id)
+	            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Item (để cập nhật kho) với ID: " + id));
+
+	        int newQuantity = request.getNewQuantity();
+	        item.setQuantity(newQuantity);
+	        
+	        // Cập nhật lại Status
+	        if (newQuantity == 0) {
+	             item.setStatus(STATUS.SOLDOUT);
+	        } else if (newQuantity < 50) {
+	            item.setStatus(STATUS.LOW);
+	        } else {
+	            item.setStatus(STATUS.AVAILABLE);
+	        }
+	        return inventoryRepository.save(item);
+	}
+
+    private InventoryResponseDTO mapToInventoryDTO(InventoryItem data) {
+        InventoryResponseDTO a = new InventoryResponseDTO();
+        a.setId(data.getId());
+        a.setName(data.getName());
+        a.setPrice(data.getPrice());
+        a.setQuantity(data.getQuantity());
+        a.setSupplierId(data.getSupplierId());
+        if (data.getCategory() != null) {
+            a.setCategoryName(data.getCategory().getName());
+        }
+        if (data.getStatus() != null) {
+            a.setStatus(data.getStatus().name()); 
+        }
+        return a;
     }
     
-    public List<InventoryItem> getItemsBySupplier(Long supplierId) {
-        return inventoryRepository.findBySupplierId(supplierId);
-    }
-    
-    public List<InventoryItem> getAllItem(){
-    	return inventoryRepository.findAll();
-    }
+
 }

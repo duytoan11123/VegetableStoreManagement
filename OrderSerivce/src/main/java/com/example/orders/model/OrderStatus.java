@@ -1,10 +1,10 @@
 package com.example.orders.model;
 
 public enum OrderStatus {
-    PENDING,     // Đang chờ xử lý
-    PROCESSING,  // Đang xử lý
-    SHIPPED,     // Đã giao hàng
-    DELIVERED,   // Đã nhận
-    CANCELLED,    // Đã hủy
-    FAILED
+    PENDING,        // Mới tạo, đang chờ thanh toán
+    PAID,           // Đã thanh toán (thành công)
+    FAILED, // Thanh toán thất bại
+    SHIPPED,        // Đang giao
+    DELIVERED,      // Đã giao
+    CANCELLED       // Đã hủy
 }

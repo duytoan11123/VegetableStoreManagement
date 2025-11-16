@@ -3,8 +3,9 @@ package com.example.payment.dto;
 import lombok.Data;
 
 @Data
-public class PaymentRequest {
+public class PaymentRequest{
     private Long orderId;
-    private Double amount;
-    private String paymentToken; // Thông tin thẻ/ví (ví dụ: "tok_visa" từ Stripe)
+    private double totalPrice;
+    private String paymentMethod; // "CASH" hoặc "CARD"
+    private String cardDetails; // (Giả định, có thể là token của Stripe, v.v.)
 }
