@@ -25,7 +25,7 @@ public interface InventoryRepository extends JpaRepository<InventoryItem, Long> 
                         "AND (COALESCE(:categoryId, 0) = 0 OR i.category.id = :categoryId)") 
     Page<InventoryItem> findAllWithCategory(
         @Param("search") String search,
-        @Param("categoryId") Long categoryId, // 👈 THÊM MỚI
+        @Param("categoryId") Long categoryId,
         Pageable pageable
     );
     
@@ -48,4 +48,10 @@ public interface InventoryRepository extends JpaRepository<InventoryItem, Long> 
     @Query("SELECT i FROM InventoryItem i LEFT JOIN FETCH i.category c WHERE i.id = :id")
     Optional<InventoryItem> findByIdWithCategory(@Param("id") Long id);
     
+    @Query("SELECT COALESCE(SUM(i.quantity), 0) as totalQuantity from InventoryItem i")
+    int getTotalQuantity();
+    
+    @Query(value = "SELECT i FROM InventoryItem i LEFT JOIN FETCH i.category c WHERE i.status = 'LOW' OR i.status = 'SOLDOUT'",
+            countQuery = "SELECT count(i) FROM InventoryItem i WHERE i.status = 'LOW' OR i.status = 'SOLDOUT'")
+     Page<InventoryItem> getLowStockItem(Pageable pageable);
 }

@@ -73,7 +73,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = () => {
-    keycloak.login();
+    keycloak.login({
+      redirectUri: typeof window !== 'undefined' ? window.location.origin : undefined,
+    });
   };
 
   const logout = () => {

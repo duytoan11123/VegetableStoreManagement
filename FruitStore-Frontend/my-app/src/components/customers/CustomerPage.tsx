@@ -176,7 +176,7 @@ export default function CustomerPage() {
                 />
             )}
 
-            <h2 className="text-3xl font-extrabold text-gray-800 mb-6 mt-4 lg:mt-0 flex items-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center font-sans tracking-tight mb-6">
                 <Users className="w-7 h-7 mr-3 text-green-600" />
                 Quản Lý Khách Hàng
             </h2>
