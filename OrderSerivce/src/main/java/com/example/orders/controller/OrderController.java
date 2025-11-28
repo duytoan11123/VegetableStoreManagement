@@ -1,18 +1,23 @@
 package com.example.orders.controller;
 
 import com.example.orders.dto.CreateOrderRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import com.example.orders.dto.UpdateStatusRequest;
 import com.example.orders.model.Order;
 import com.example.orders.model.OrderStatus;
 import com.example.orders.service.OrderService;
-
-import java.util.Map;
-
+import org.springframework.web.bind.annotation.RequestParam;
+import java.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
@@ -43,8 +48,9 @@ public class OrderController {
                     .body("Lỗi máy chủ nội bộ: " + e.getMessage());
         }
     }
+    
+    
     /**
-     * Endpoint cho: CậpNhậtTrạngTháiĐơn()
      * PUT /api/orders/{id}/status
      */
     @PutMapping("/{id}/status")
@@ -56,12 +62,25 @@ public class OrderController {
         return ResponseEntity.ok(updatedOrder);
     }
 
+    @GetMapping
+    public ResponseEntity<Page<Order>> getAllOrders(
+            @RequestParam(value = "startDate", required = false) 
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            
+            @RequestParam(value = "endDate", required = false) 
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            
+            @PageableDefault(size = 10, sort = "orderDate", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(orderService.getAllOrders(startDate, endDate, pageable));
+    }
+    
     /**
-     * (Bonus) Endpoint để xem chi tiết đơn hàng
+     * Endpoint để xem chi tiết đơn hàng
      * GET /api/orders/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrderDetails(@PathVariable("id") Long orderId) { // 👈 Đã chỉ định rõ ràng "id"
+    public ResponseEntity<Order> getOrderDetails(@PathVariable("id") Long orderId) {
         Order order = orderService.getOrderDetails(orderId);
         return ResponseEntity.ok(order);
     }

@@ -3,6 +3,7 @@ package com.example.orders.service;
 import com.example.orders.dto.*;
 import org.slf4j.Logger; 
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import com.example.orders.model.Order;
 import com.example.orders.model.OrderItem;
@@ -19,10 +20,13 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Pageable;
 @Service
 public class OrderService {
@@ -39,9 +43,7 @@ public class OrderService {
     private String paymentService;
     @Value("${customer.service.name}")
     private String customerService;
-    /**
-     * 1. Logic cho: TạoĐơnHàng() (bao gồm TínhTổngTiền)
-     */
+    
     @Transactional
     public Order createOrder(CreateOrderRequest request) {
     	Order order = new Order();
@@ -240,11 +242,120 @@ public class OrderService {
         return new RevenueReport(revenue, startDate, endDate);
     }
     
-    public List<BestsellerProjection> getBestSellingItems(int limit) {
-        // Dùng PageRequest.of(page, size) để giới hạn kết quả
-        // page 0 = trang đầu tiên
+    public List<BestsellerDTO> getBestSellingItems(int limit) {
         Pageable pageable = PageRequest.of(0, limit);
         
-        return orderRepository.findBestsellers(pageable);
+        // 1. Lấy dữ liệu thô (Projection) từ Repository
+        List<BestsellerProjection> projections = orderRepository.findBestsellers(pageable);
+        
+        // 2. Chuyển đổi sang DTO (Mapping thủ công)
+        return projections.stream()
+            .map(p -> new BestsellerDTO(
+                p.getProductId(),
+                p.getProductName(),
+                p.getTotalQuantitySold()
+            ))
+            .collect(Collectors.toList());
+    }
+    public List<DailyRevenueDTO> getRevenueChartData(int days) {
+        LocalDateTime startDate = LocalDate.now().minusDays(days - 1).atStartOfDay();
+        List<DailyRevenueProjection> rawData = orderRepository.getDailyRevenueSince(startDate);
+        
+        //Chuyển List Projection thành Map để tra cứu nhanh
+        // Key: LocalDate, Value: Double
+        Map<LocalDate, Double> revenueMap = rawData.stream()
+            .collect(Collectors.toMap(
+                DailyRevenueProjection::getDate, 
+                // Kiểm tra null an toàn
+                projection -> projection.getRevenue() != null ? projection.getRevenue() : 0.0
+            ));
+        
+        // Tạo danh sách DTO đầy đủ (lấp đầy các ngày trống bằng 0)
+        List<DailyRevenueDTO> fullData = new ArrayList<>();
+        for (int i = 0; i < days; i++) {
+            // Chạy từ ngày cũ nhất đến hôm nay
+            LocalDate date = LocalDate.now().minusDays(days - 1 - i);
+            
+            // Lấy doanh thu từ Map, nếu không có thì mặc định là 0.0
+            Double revenue = revenueMap.getOrDefault(date, 0.0);
+            
+            fullData.add(new DailyRevenueDTO(date, revenue));
+        }
+        
+        return fullData;
+    }
+    
+    public OrderGrowthDTO getOrderGrowthMetric() {
+        // Xác định thời gian Hôm nay
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfToday = LocalDate.now().atTime(LocalTime.MAX);
+
+        // Xác định thời gian Hôm qua
+        LocalDateTime startOfYesterday = LocalDate.now().minusDays(1).atStartOfDay();
+        LocalDateTime endOfYesterday = LocalDate.now().minusDays(1).atTime(LocalTime.MAX);
+
+        // Gọi Repository để đếm
+        long todayCount = orderRepository.countOrdersBetween(startOfToday, endOfToday);
+        long yesterdayCount = orderRepository.countOrdersBetween(startOfYesterday, endOfYesterday);
+
+        // Tính tỷ lệ tăng trưởng (%)
+        double growthRate = 0.0;
+        
+        if (yesterdayCount > 0) {
+            growthRate = ((double) (todayCount - yesterdayCount) / yesterdayCount) * 100;
+        } else if (todayCount > 0) {
+            growthRate = 100.0;
+        }
+
+
+        return new OrderGrowthDTO(todayCount, growthRate);
+    }
+    
+
+    /**
+     * Tính doanh thu tháng này và tăng trưởng so với tháng trước
+     */
+    public MonthlyRevenueDTO getMonthlyRevenueMetric() {
+        //  Xác định thời gian Tháng Này
+        LocalDateTime startOfThisMonth = LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
+        LocalDateTime endOfThisMonth = LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
+
+        // Xác định thời gian Tháng Trước
+        LocalDateTime startOfLastMonth = LocalDate.now().minusMonths(1).with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
+        LocalDateTime endOfLastMonth = LocalDate.now().minusMonths(1).with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
+
+        // Doanh thu 2 tháng
+        Double thisMonthRev = orderRepository.getRevenueBetweenDates(startOfThisMonth, endOfThisMonth);
+        Double lastMonthRev = orderRepository.getRevenueBetweenDates(startOfLastMonth, endOfLastMonth);
+
+        // Xử lý null
+        if (thisMonthRev == null) thisMonthRev = 0.0;
+        if (lastMonthRev == null) lastMonthRev = 0.0;
+
+        //  Tính tăng trưởng
+        double growthRate = 0.0;
+        if (lastMonthRev > 0) {
+            growthRate = ((thisMonthRev - lastMonthRev) / lastMonthRev) * 100;
+        } else if (thisMonthRev > 0) {
+            growthRate = 100.0; // Tăng trưởng tuyệt đối nếu tháng trước = 0
+        }
+
+        return new MonthlyRevenueDTO(thisMonthRev, growthRate);
+    }
+    
+    public Page<Order> getAllOrders(Pageable pageable) {
+        return orderRepository.findAll(pageable);
+    }
+    
+    /**
+     * Lấy danh sách đơn hàng có hỗ trợ lọc theo ngày
+     */
+    public Page<Order> getAllOrders(LocalDate startDate, LocalDate endDate, Pageable pageable) {
+        if (startDate != null && endDate != null) {
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+            return orderRepository.findAllByOrderDateBetween(startDateTime, endDateTime, pageable);
+        }
+        return orderRepository.findAll(pageable);
     }
 }

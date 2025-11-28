@@ -32,8 +32,7 @@ public class InventoryController {
     @Autowired
     private InventoryService inventoryService;
 
-    // ... (getAllItems, getItemDetails, createInventoryItem, getAllCategories, deleteInventoryItem, updateInventoryItem không đổi) ...
-    @GetMapping("/items")
+    @GetMapping("items")
     public ResponseEntity<Page<InventoryResponseDTO>> getAllItems(
             @RequestParam(value = "supplierId", required = false) Long supplierId,
             @RequestParam(value = "search", required = false) String search, 
@@ -48,10 +47,12 @@ public class InventoryController {
         }
         return ResponseEntity.ok(itemsPage);
     }
+    
     @GetMapping("/items/{id}")
     public ResponseEntity<InventoryResponseDTO> getItemDetails(@PathVariable("id") Long id) {
         return ResponseEntity.ok(inventoryService.getItemDetails(id));
     }
+    
     @PostMapping("/items")
     public ResponseEntity<InventoryResponseDTO> createInventoryItem(@RequestBody CreateItemRequest request) {
         InventoryResponseDTO newItemDTO = inventoryService.addFruit(request);
@@ -63,6 +64,7 @@ public class InventoryController {
         inventoryService.deleteItem(id);
         return ResponseEntity.ok().build(); 
     }
+    
     @PutMapping("/items/{id}")
     public ResponseEntity<InventoryResponseDTO> updateInventoryItem(
             @PathVariable("id") Long id, 

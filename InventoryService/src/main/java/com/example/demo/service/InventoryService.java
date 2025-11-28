@@ -183,7 +183,17 @@ public class InventoryService {
 	        }
 	        return inventoryRepository.save(item);
 	}
-
+    
+    @Transactional(readOnly=true)
+    public Page<InventoryResponseDTO> getLowStockItem(Pageable pageable){
+    	Page<InventoryItem> itemData= inventoryRepository.getLowStockItem(pageable);
+    	return itemData.map(this::mapToInventoryDTO);
+    }
+    
+    @Transactional(readOnly=true)
+    public int getTotalQuantity() {
+    	return inventoryRepository.getTotalQuantity();
+    }
     private InventoryResponseDTO mapToInventoryDTO(InventoryItem data) {
         InventoryResponseDTO a = new InventoryResponseDTO();
         a.setId(data.getId());

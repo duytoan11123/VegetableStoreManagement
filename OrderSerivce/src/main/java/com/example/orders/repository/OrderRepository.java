@@ -1,6 +1,10 @@
 package com.example.orders.repository;
 
 import com.example.orders.dto.BestsellerProjection;
+import com.example.orders.dto.DailyRevenueDTO;
+import com.example.orders.dto.DailyRevenueProjection;
+
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.example.orders.model.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,10 +22,24 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 	            @Param("startDate") LocalDateTime startDate,
 	            @Param("endDate") LocalDateTime endDate);
 	
-	@Query("SELECT oi.productId AS productId, SUM(oi.quantity) AS totalQuantitySold " +
+	@Query("SELECT oi.productId AS productId, oi.productName as productName, SUM(oi.quantity) AS totalQuantitySold " +
 	           "FROM OrderItem oi " +
 	           "WHERE oi.order.status != 'CANCELLED' " +
-	           "GROUP BY oi.productId " +
+	           "GROUP BY oi.productId, oi.productName " +
 	           "ORDER BY totalQuantitySold DESC")
 	    List<BestsellerProjection> findBestsellers(Pageable pageable);
+
+	@Query("SELECT function('DATE', o.orderDate) as date, SUM(o.totalPrice) as revenue " +
+	           "FROM Order o " +
+	           "WHERE o.status IN ('PAID', 'SHIPPED', 'DELIVERED') " +
+	           "AND o.orderDate >= :startDate " +
+	           "GROUP BY function('DATE', o.orderDate) " +
+	           "ORDER BY function('DATE', o.orderDate) ASC")
+	    List<DailyRevenueProjection> getDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
+	
+	
+	@Query("SELECT COUNT(o) FROM Order o WHERE o.orderDate BETWEEN :start AND :end")
+    Long countOrdersBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+	
+	Page<Order> findAllByOrderDateBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
 }

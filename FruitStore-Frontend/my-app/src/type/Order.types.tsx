@@ -17,3 +17,31 @@ export interface CreateOrderRequestDTO {
         pricePerUnit: number;
     }[];
 }
+
+export interface OrderItemResponse {
+    id: number;
+    productId: number;
+    productName: string;
+    quantity: number;
+    pricePerUnit: number; 
+}
+
+export interface OrderResponse {
+    id: number;
+    customerId: number | null;
+    status: 'PENDING' | 'PAID' | 'FAILED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+    paymentMethod: string;
+    totalPrice: number;
+    orderDate: string; // ISO Date string
+    items: OrderItemResponse[];
+}
+
+export interface OrderPageData {
+    content: OrderResponse[];
+    totalPages: number;
+    totalElements: number;
+    number: number;
+    size: number;
+    first: boolean;
+    last: boolean;
+}
