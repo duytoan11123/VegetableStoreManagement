@@ -138,7 +138,7 @@ public class OrderService {
             // Gói DTO (UpdatePointsRequest phải được tạo trong project này)
             UpdatePointsRequest pointsRequest = new UpdatePointsRequest();
             pointsRequest.setPointsToAdd(pointsToAdd);
-
+            pointsRequest.setId(savedOrder.getCustomerId());
             try {
                 String pointsUrl = "http://" + customerService + "/api/customers/" + savedOrder.getCustomerId() + "/points";
                 restTemplate.put(pointsUrl, pointsRequest);

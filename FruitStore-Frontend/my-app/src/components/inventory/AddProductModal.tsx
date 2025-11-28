@@ -215,7 +215,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSu
                                 value={formData.supplierId} 
                                 onChange={handleChange}
                                 required
-                                className="text-gray-500 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                                className="hover:cursor-pointer text-gray-500 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
                             >
                                 <option value="">-- Chọn Nhà Cung Cấp --</option>
                                 {suppliers.map(s => (
@@ -232,7 +232,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSu
                                 value={formData.categoryId} // (SỬA LỖI) Bỏ || ''
                                 onChange={handleChange}
                                 required
-                                className="text-gray-500 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                                className="hover:cursor-pointer text-gray-500 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
                             >
                                 <option value="">-- Chọn Danh Mục --</option>
                                 {categories.map(c => (

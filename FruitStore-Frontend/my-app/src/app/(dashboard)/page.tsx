@@ -79,7 +79,7 @@ const HomePage: React.FC = () => {
                                 </div>
                                 
                                 <div 
-                                    className={`w-full rounded-t-md transition-all duration-500 relative hover:opacity-80 ${item.revenue > 0 ? 'bg-blue-500' : 'bg-gray-200'}`}
+                                    className={`hover:cursor-pointer w-full rounded-t-md transition-all duration-500 relative hover:opacity-80 ${item.revenue > 0 ? 'bg-blue-500' : 'bg-gray-200'}`}
                                     style={{ 
                                         height: item.revenue > 0 ? `${heightPercent}%` : '4px' 
                                     }}
@@ -209,8 +209,8 @@ const HomePage: React.FC = () => {
             <div className="mt-6 bg-white p-6 rounded-xl shadow-lg">
                 <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center justify-between">
                     <span>Tồn kho thấp cần nhập thêm</span>
-                    <a href="/inventory" className="text-sm text-green-600 font-medium hover:text-green-800 transition flex items-center">
-                        Quản lý kho 
+                    <a href="/supplier" className="text-sm text-green-600 font-medium hover:text-green-800 transition flex items-center">
+                        Nhập thêm
                         <ArrowRight className="w-4 h-4 ml-1" />
                     </a>
                 </h3>

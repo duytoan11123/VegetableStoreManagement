@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.model.Customer;
 import com.example.demo.dto.CustomerRequestDTO;
+import com.example.demo.dto.UpdatePointsRequest;
 import com.example.demo.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -44,5 +45,11 @@ public class CustomerController {
     public ResponseEntity<Void> deleteCustomer(@PathVariable("id") Long id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.ok().build();
+    }
+    
+    @PutMapping("/{id}/points")
+    public ResponseEntity<Void> addPointToCustomer(@RequestBody UpdatePointsRequest request){
+    	customerService.addPointsToCustomer(request.getId(),request.getPointsToAdd());
+    	return ResponseEntity.ok().build();
     }
 }

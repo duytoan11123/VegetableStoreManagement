@@ -13,6 +13,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("SELECT c FROM Customer c " +
            "WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%'))")
+           "OR LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%'))" +
+           "OR LOWER(c.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
     List<Customer> findBySearchTerm(@Param("search") String search);
 }

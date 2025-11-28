@@ -288,14 +288,14 @@ export default function OrderHistoryPage() {
                         <button
                             onClick={handlePrevPage}
                             disabled={!pageData || pageData.first}
-                            className="text-gray-600 flex items-center justify-center px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="hover:cursor-pointer text-gray-600 flex items-center justify-center px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <ChevronLeft className="h-4 w-4 mr-1" /> Trước
                         </button>
                         <button
                             onClick={handleNextPage}
                             disabled={!pageData || pageData.last}
-                            className="text-gray-600 flex items-center justify-center px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="hover:cursor-pointer text-gray-600 flex items-center justify-center px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Sau <ChevronRight className="h-4 w-4 ml-1" />
                         </button>

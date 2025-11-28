@@ -6,4 +6,5 @@ import lombok.Data;
 @Data
 public class UpdatePointsRequest {
     private int pointsToAdd;
+    private long id;
 }

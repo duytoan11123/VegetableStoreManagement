@@ -36,17 +36,16 @@ public class SecurityConfig {
 
             // 2. Cấu hình Quy tắc Phân quyền (Authorization Rules)
             .authorizeExchange(exchanges -> exchanges
-                // Cho phép truy cập công khai vào Eureka Dashboard và các endpoint public khác
-                .pathMatchers("/eureka/**").permitAll()
-                .pathMatchers("/api/auth/**").permitAll() // Ví dụ: endpoint đăng nhập/đăng ký
-
-                // Yêu cầu token hợp lệ VÀ có quyền "ADMIN"
-                .pathMatchers(HttpMethod.POST, "/api/users/**").hasRole("ADMIN")
-
-                // Yêu cầu token hợp lệ VÀ có quyền "USER" hoặc "ADMIN"
-                .pathMatchers("/api/orders/**", "/api/users/**").hasAnyRole("ADMIN", "USER")
-
-                // Bất kỳ request nào còn lại PHẢI có token và được xác thực
+              
+                .pathMatchers(HttpMethod.PUT,"/api/inventory/**").hasRole("ADMIN")
+                .pathMatchers(HttpMethod.POST,"/api/inventory/**").hasRole("ADMIN")
+                .pathMatchers(HttpMethod.DELETE,"/api/inventory/**").hasRole("ADMIN")
+                
+                .pathMatchers(HttpMethod.PUT,"/api/customers/**").hasRole("ADMIN")
+                .pathMatchers(HttpMethod.POST,"/api/customers/**").hasRole("ADMIN")
+                .pathMatchers(HttpMethod.DELETE,"/api/customers/**").hasRole("ADMIN")
+                
+                
                 .anyExchange().permitAll()
             )
 
