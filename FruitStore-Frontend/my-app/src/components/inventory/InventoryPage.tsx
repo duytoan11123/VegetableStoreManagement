@@ -471,7 +471,7 @@ export default function InventoryPage() {
                         <button
                             onClick={handlePrevPage}
                             disabled={pageData?.first}
-                            className="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="hover:cursor-pointer flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <ChevronLeft className="h-5 w-5 mr-1" aria-hidden="true" />
                             Trang trước
@@ -483,7 +483,7 @@ export default function InventoryPage() {
                         <button
                             onClick={handleNextPage}
                             disabled={pageData?.last}
-                            className="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="hover:cursor-pointer flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Trang sau
                             <ChevronRight className="h-5 w-5 ml-1" aria-hidden="true" />

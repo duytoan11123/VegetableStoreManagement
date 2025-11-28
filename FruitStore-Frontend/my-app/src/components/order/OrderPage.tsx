@@ -342,7 +342,7 @@ export default function OrderPage() {
                     {isLoadingProducts ? (
                         <Spinner variant="inline" text="Đang tải sản phẩm..." />
                     ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <div className="text-red-300 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                             {products.length === 0 && <p>Không tìm thấy sản phẩm.</p>}
 
                             {products.map(product => (
@@ -421,13 +421,14 @@ export default function OrderPage() {
                             <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
                                 <span className="text-green-700 font-medium">{selectedCustomer.name}</span>
                                 <button onClick={() => setSelectedCustomer(null)} className="text-red-500">
-                                    <X className="w-4 h-4" />
+                                    <X className="hover:cursor-pointer w-4 h-4" />
                                 </button>
                             </div>
                         ) : (
                             <div className="relative">
                                 <UserSearch className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                                 <input
+                                    autoComplete = "off"
                                     type="text"
                                     placeholder="Tìm theo tên hoặc email KH..."
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-500"
@@ -442,9 +443,9 @@ export default function OrderPage() {
                                                 <button
                                                     key={customer.id}
                                                     onClick={() => handleSelectCustomer(customer)}
-                                                    className="block w-full text-left p-2 text-sm hover:bg-gray-100"
+                                                    className="hover: cursor-pointer text-gray-400 block w-full text-left p-2 text-sm hover:bg-gray-100"
                                                 >
-                                                    {customer.name} ({customer.email})
+                                                    <p className = "font-extrabold text-green-500">{customer.name}</p> ({customer.email})
                                                 </button>
                                             ))
                                         }

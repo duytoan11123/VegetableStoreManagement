@@ -80,7 +80,7 @@ public class InventoryService {
         if (request.getQuantity() ==0) {
         	newItem.setStatus(STATUS.SOLDOUT);
         }
-        if (request.getQuantity() < 50) {
+        else if (request.getQuantity() < 50) {
             newItem.setStatus(STATUS.LOW);
         } else {
             newItem.setStatus(STATUS.AVAILABLE);

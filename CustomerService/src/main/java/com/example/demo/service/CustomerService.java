@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -52,5 +53,13 @@ public class CustomerService {
             throw new EntityNotFoundException("Không tìm thấy Customer ID: " + id);
         }
         customerRepository.deleteById(id);
+    }
+    
+    @Transactional
+    public void addPointsToCustomer(Long id, int pointsToAdd) {
+    	 Customer customer = customerRepository.findById(id)
+    			 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Customer ID: " + id));
+    	 customer.setLoyaltyPoints(customer.getLoyaltyPoints()+pointsToAdd);
+    	 customerRepository.save(customer);
     }
 }

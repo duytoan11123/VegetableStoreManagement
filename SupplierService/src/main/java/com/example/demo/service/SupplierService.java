@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.CreateSupplierRequest;
+import com.example.demo.dto.EditSupplierRequest;
 import com.example.demo.model.Supplier;
 import com.example.demo.repository.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,6 +32,21 @@ public class SupplierService {
     public Supplier getSupplierInfo(Long supplierId) {
         return supplierRepository.findById(supplierId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Nhà cung cấp với ID: " + supplierId));
+    }
+    
+    public Supplier updateSupplier(Long id,EditSupplierRequest request) {
+    	Supplier supplier = supplierRepository.findById(id)
+    			.orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Supplier ID: " + id));
+    	supplier.setAddress(request.getAddress());
+    	supplier.setContactPerson(request.getContactPerson());
+    	supplier.setEmail(request.getEmail());
+    	supplier.setName(request.getName());
+    	supplier.setPhone(request.getPhone());
+    	return supplierRepository.save(supplier);
+    }
+    
+    public void deleteSupplier(Long id) {
+    	supplierRepository.deleteById(id);
     }
     
     public List<Supplier> getAll(){

@@ -144,7 +144,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
                 <button 
                     onClick={onClose} 
                     disabled={isLoading}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition disabled:opacity-50"
+                    className="hover:cursor-pointer absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition disabled:opacity-50"
                 >
                     <X className="w-6 h-6" />
                 </button>
@@ -230,14 +230,14 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
                             type="button"
                             onClick={onClose}
                             disabled={isLoading}
-                            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition"
+                            className="hover:cursor-pointer px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition"
                         >
                             Hủy
                         </button>
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className={`px-4 py-2 text-white rounded-lg font-medium flex items-center disabled:opacity-70 
+                            className={`hover:cursor-pointer px-4 py-2 text-white rounded-lg font-medium flex items-center disabled:opacity-70 
                                 ${isEditMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
                         >
                             {isLoading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : (isEditMode ? <Edit className="w-5 h-5 mr-2" /> : <PlusCircle className="w-5 h-5 mr-2" />)}
