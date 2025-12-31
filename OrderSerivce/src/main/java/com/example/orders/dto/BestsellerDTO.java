@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class BestsellerDTO {
     private Long productId;
     private String productName;
-    private Long totalQuantity; // Tổng số lượng bán ra (kg)
+    private Long totalQuantity;
 }

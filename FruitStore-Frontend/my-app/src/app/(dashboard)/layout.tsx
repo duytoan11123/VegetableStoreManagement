@@ -15,9 +15,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { logout } = useAuth();
-  // Hàm xử lý menu (mô phỏng)
   const handleMenuClick = () => {
-    alert('Menu mobile được kích hoạt!');
   };
   const getLinkClass = (path: string) => {
     const isActive = (path === '/') ? pathname === path : pathname.startsWith(path);

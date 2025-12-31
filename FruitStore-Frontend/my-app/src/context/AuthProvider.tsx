@@ -11,7 +11,7 @@ interface AuthContextType {
   user: KeycloakProfile | null;
   login: () => void;
   logout: () => void;
-  isLoading: boolean; // Thêm trạng thái loading
+  isLoading: boolean;
   token: string | null;
   hasRole: (role: string) => boolean;
 }
@@ -33,7 +33,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<KeycloakProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Bắt đầu với trạng thái loading
+  const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -82,20 +82,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     keycloak.logout();
   };
   const hasRole = (role: string): boolean => {
-        // Keycloak tự động thêm "ROLE_" nếu bạn dùng Spring Security
-        // nhưng keycloak.hasRealmRole() chỉ kiểm tra tên gốc (ví dụ: 'ADMIN')
-        return keycloak.authenticated ? keycloak.hasRealmRole(role) : false;
-    };
+    // Keycloak tự động thêm "ROLE_" nếu bạn dùng Spring Security
+    // nhưng keycloak.hasRealmRole() chỉ kiểm tra tên gốc (ví dụ: 'ADMIN')
+    return keycloak.authenticated ? keycloak.hasRealmRole(role) : false;
+  };
 
   // Hiển thị loading trong khi Keycloak đang khởi tạo
   if (isLoading) {
-    return ( <Spinner variant="full" size="sm" text="Đang tải dữ liệu người dùng..." />) 
+    return (<Spinner variant="full" size="sm" text="Đang tải dữ liệu người dùng..." />)
   }
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, token, login, logout, isLoading, hasRole }}>
-            {children}
-        </AuthContext.Provider>
+      {children}
+    </AuthContext.Provider>
   );
 };
 
