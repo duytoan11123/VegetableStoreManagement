@@ -1,5 +1,6 @@
 package com.example.orders.repository;
 
+import com.example.orders.dto.BestsellerDTO;
 import com.example.orders.dto.BestsellerProjection;
 import com.example.orders.dto.DailyRevenueDTO;
 import com.example.orders.dto.DailyRevenueProjection;
@@ -22,12 +23,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 	            @Param("startDate") LocalDateTime startDate,
 	            @Param("endDate") LocalDateTime endDate);
 	
-	@Query("SELECT oi.productId AS productId, oi.productName as productName, SUM(oi.quantity) AS totalQuantitySold " +
-	           "FROM OrderItem oi " +
-	           "WHERE oi.order.status != 'CANCELLED' " +
+	@Query("SELECT new com.example.orders.dto.BestsellerDTO(oi.productId, oi.productName, COALESCE(SUM(oi.quantity), 0)) " +
+	           "FROM OrderItem oi JOIN oi.order o " +
+	           "WHERE o.status IN ('PAID', 'SHIPPED', 'DELIVERED') " +
 	           "GROUP BY oi.productId, oi.productName " +
-	           "ORDER BY totalQuantitySold DESC")
-	    List<BestsellerProjection> findBestsellers(Pageable pageable);
+	           "ORDER BY COALESCE(SUM(oi.quantity), 0) DESC")
+	    List<BestsellerDTO> findBestsellers(Pageable pageable);
 
 	@Query("SELECT function('DATE', o.orderDate) as date, SUM(o.totalPrice) as revenue " +
 	           "FROM Order o " +
