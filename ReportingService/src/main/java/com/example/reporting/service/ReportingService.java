@@ -3,28 +3,38 @@ package com.example.reporting.service;
 import com.example.reporting.dto.BestsellerReportItem;
 import com.example.reporting.dto.DashboardOverviewResponse;
 import com.example.reporting.dto.DashboardOverviewResponse.*;
-import com.example.reporting.dto.RevenueReport;
+import com.example.reporting.dto.RevenueReportDTO;
 import com.example.reporting.dto.internal.InventoryItemDTO;
 import com.example.reporting.dto.internal.OrderServiceBestsellerDTO;
+
+import lombok.Data;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 @Service
 public class ReportingService {
+	
 	private static final Logger logger = LoggerFactory.getLogger(ReportingService.class);
     @Autowired
     private RestTemplate restTemplate;
@@ -35,130 +45,228 @@ public class ReportingService {
     @Value("${inventory.service.name}")
     private String inventoryService; // "inventory-service"
 
+    @Data
+    public static class RawInventoryItem {
+        private Long id;
+        private String name;
+        private int quantity;
+        private double price;
+        private String status;       
+        private String categoryName;
+    }
+    
+    @Data
+    public static class RawImportHistory {
+        private Long id;
+        private String itemName;
+        private int quantityAdded;
+        private double pricePerUnit;
+        private String importDate; 
+    }
     
     public DashboardOverviewResponse getDashboardData() {
-        long start = System.currentTimeMillis();
         DashboardOverviewResponse response = new DashboardOverviewResponse();
 
-        // --- 1. INVENTORY: Tổng Tồn Kho ---
-        // Gọi API: /api/inventory/metrics/totalQuantity
-        CompletableFuture<Integer> totalQtyFuture = CompletableFuture.supplyAsync(() -> {
+        CompletableFuture<List<RawInventoryItem>> inventoryFuture = CompletableFuture.supplyAsync(() -> {
             try {
-                return restTemplate.getForObject(
-                    "http://" + inventoryService + "/api/inventory/metrics/totalQuantity", 
-                    Integer.class
-                );
+                return restTemplate.exchange(
+                    "http://inventory-service/api/inventory/items/all",
+                    HttpMethod.GET, null,
+                    new ParameterizedTypeReference<List<RawInventoryItem>>() {}
+                ).getBody();
             } catch (Exception e) {
-                logger.error("Failed to get Total Quantity", e);
-                return 0;
+                return new ArrayList<>();
             }
         });
 
-        // --- 2. INVENTORY: Hàng tồn kho thấp (Số lượng & Danh sách) ---
-        // Gọi API: /api/inventory/metrics/lowStock
-        // Chúng ta gọi 1 lần lấy 5 item để vừa có số tổng (totalElements) vừa có list hiển thị
-        CompletableFuture<Map> lowStockPageFuture = CompletableFuture.supplyAsync(() -> {
-            try {
-                return restTemplate.getForObject(
-                    "http://"+inventoryService+"/api/inventory/metrics/lowStock?page=0&size=5", 
-                    Map.class // Spring trả về Page dưới dạng Map JSON
-                );
-            } catch (Exception e) {
-                logger.error("Failed to get Low Stock", e);
-                return null;
-            }
-        });
-
-        // --- 3. ORDER: Đơn hàng mới & Tăng trưởng ---
         CompletableFuture<OrderSummary> orderGrowthFuture = CompletableFuture.supplyAsync(() -> {
             try {
-                return restTemplate.getForObject("http://" + orderService + "/api/orders/metrics/growth", OrderSummary.class);
-            } catch (Exception e) {
-                return new OrderSummary(0, 0.0);
-            }
+                return restTemplate.getForObject("http://order-service/api/orders/metrics/growth", OrderSummary.class);
+            } catch (Exception e) { return new OrderSummary(0, 0.0); }
         });
 
-        // --- 4. ORDER: Doanh thu tháng ---
         CompletableFuture<RevenueSummary> revenueMonthFuture = CompletableFuture.supplyAsync(() -> {
             try {
-                return restTemplate.getForObject("http://" + orderService + "/api/orders/metrics/monthly-revenue", RevenueSummary.class);
-            } catch (Exception e) {
-                return new RevenueSummary(0.0, 0.0);
-            }
+                return restTemplate.getForObject("http://order-service/api/orders/metrics/monthly-revenue", RevenueSummary.class);
+            } catch (Exception e) { return new RevenueSummary(0.0, 0.0); }
         });
-
-        // --- 5. ORDER: Biểu đồ ---
+        
         CompletableFuture<List<DailyRevenueChartItem>> chartFuture = CompletableFuture.supplyAsync(() -> {
-            try {
-                return restTemplate.exchange(
-                    "http://" + orderService + "/api/orders/metrics/revenue-chart?days=7",
-                    HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<DailyRevenueChartItem>>() {}
-                ).getBody();
-            } catch (Exception e) {
-                return new ArrayList<>();
-            }
+             try {
+                return restTemplate.exchange("http://order-service/api/orders/metrics/revenue-chart?days=7",
+                    HttpMethod.GET, null, new ParameterizedTypeReference<List<DailyRevenueChartItem>>() {}).getBody();
+            } catch (Exception e) { return new ArrayList<>(); }
         });
-
-        // --- 6. ORDER: Bestsellers ---
+        
         CompletableFuture<List<BestsellerItem>> bestsellerFuture = CompletableFuture.supplyAsync(() -> {
             try {
-                return restTemplate.exchange(
-                    "http://" + orderService + "/api/orders/metrics/bestsellers",
-                    HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<BestsellerItem>>() {}
-                ).getBody();
+                return restTemplate.exchange("http://order-service/api/orders/metrics/bestsellers?limit=5",
+                    HttpMethod.GET, null, new ParameterizedTypeReference<List<BestsellerItem>>() {}).getBody();
             } catch (Exception e) {
-                return new ArrayList<>();
+                return new ArrayList<>(); 
             }
         });
-
-        // --- CHỜ TẤT CẢ HOÀN THÀNH (JOIN) ---
-        CompletableFuture.allOf(
-            totalQtyFuture, lowStockPageFuture, orderGrowthFuture, 
-            revenueMonthFuture, chartFuture, bestsellerFuture
-        ).join();
-
-        // --- GÁN DỮ LIỆU VÀO RESPONSE ---
-
-        // 1. Xử lý Inventory Data
-        Integer totalQty = totalQtyFuture.join();
-        Map lowStockData = lowStockPageFuture.join();
         
-        long lowStockCount = 0;
-        List<LowStockItem> lowStockItemsList = new ArrayList<>();
+        CompletableFuture.allOf(inventoryFuture, orderGrowthFuture, revenueMonthFuture, chartFuture, bestsellerFuture).join();
+        
+        List<RawInventoryItem> allItems = inventoryFuture.join();
 
-        if (lowStockData != null) {
-            // Lấy totalElements từ Page object
-            lowStockCount = ((Number) lowStockData.getOrDefault("totalElements", 0)).longValue();
-            
-            // Lấy content (danh sách item) từ Page object
-            List<Map<String, Object>> content = (List<Map<String, Object>>) lowStockData.get("content");
-            if (content != null) {
-                for (Map<String, Object> item : content) {
-                    LowStockItem lowItem = new LowStockItem();
-                    lowItem.setId(((Number) item.get("id")).longValue());
-                    lowItem.setName((String) item.get("name"));
-                    lowItem.setQuantity(((Number) item.get("quantity")).intValue());
-                    lowItem.setStatus((String) item.get("status"));
-                    lowItem.setCategoryName((String) item.get("categoryName"));
-                    lowStockItemsList.add(lowItem);
+
+        int totalQuantity = 0;
+        long lowStockCount = 0;
+        List<LowStockItem> lowStockList = new ArrayList<>();
+
+        if (allItems != null) {
+            for (RawInventoryItem item : allItems) {
+                totalQuantity += item.quantity;
+                boolean isLow = item.quantity < 50 || "LOW".equals(item.status) || "SOLDOUT".equals(item.status);
+                
+                if (isLow) {
+                    lowStockCount++;
+                    if (lowStockList.size() < 10) {
+                        LowStockItem lowItem = new LowStockItem();
+                        lowItem.setId(item.id);
+                        lowItem.setName(item.name);
+                        lowItem.setQuantity(item.quantity);
+                        lowItem.setStatus(item.status);
+                        lowItem.setCategoryName(item.categoryName);
+                        lowStockList.add(lowItem);
+                    }
                 }
             }
         }
-        
-        // Set Inventory Summary
-        response.setInventory(new InventorySummary(totalQty));
-        // Set Low Stock List (cho bảng)
-        response.setLowStockItems(lowStockItemsList);
 
-        // 2. Xử lý Order Data
+        response.setInventory(new InventorySummary(totalQuantity, lowStockCount));
+        response.setLowStockItems(lowStockList);
+
         response.setOrders(orderGrowthFuture.join());
         response.setRevenue(revenueMonthFuture.join());
         response.setRevenueChart(chartFuture.join());
         response.setTopSellingItems(bestsellerFuture.join());
 
-        logger.info("Dashboard data aggregated in {} ms", System.currentTimeMillis() - start);
         return response;
+    }
+    
+    public RevenueReportDTO getRevenueReport(LocalDate startDate, LocalDate endDate) {
+        try {
+            String url = "http://order-service/api/reports/revenue?startDate=" + startDate + "&endDate=" + endDate;
+            return restTemplate.getForObject(url, RevenueReportDTO.class);
+        } catch (Exception e) {
+            logger.error("Failed to fetch Revenue Report", e);
+            return new RevenueReportDTO(0.0, startDate, endDate);
+        }
+    }
+    
+    public List<DailyRevenueChartItem> getRevenueChart(LocalDate startDate, LocalDate endDate) {
+        try {
+            long daysDiff = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+            if (daysDiff < 1) daysDiff = 1;
+
+            String url = String.format(
+                "http://order-service/api/orders/metrics/revenue-chart?startDate=%s&endDate=%s&days=%d",
+                startDate, endDate, daysDiff
+            );
+            
+            logger.info("Calling Order Service Chart API: {}", url);
+
+            return restTemplate.exchange(
+                url,
+                HttpMethod.GET, 
+                null, 
+                new ParameterizedTypeReference<List<DailyRevenueChartItem>>() {}
+            ).getBody();
+        } catch (Exception e) {
+            logger.error("Failed to fetch custom chart data", e);
+            return new ArrayList<>();
+        }
+    }
+    
+    public byte[] exportMonthlyReport(int month, int year) {
+        StringBuilder csv = new StringBuilder();
+        
+        LocalDate start = LocalDate.of(year, month, 1);
+        LocalDate end = start.with(TemporalAdjusters.lastDayOfMonth());
+        LocalDateTime startDateTime = start.atStartOfDay();
+        LocalDateTime endDateTime = end.atTime(LocalTime.MAX);
+
+        // A. Lấy Doanh thu bán hàng
+        CompletableFuture<List<DailyRevenueChartItem>> revenueFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                String url = String.format("http://order-service/api/orders/metrics/revenue-chart?startDate=%s&endDate=%s", start, end);
+                return restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<DailyRevenueChartItem>>() {}).getBody();
+            } catch (Exception e) { return new ArrayList<>(); }
+        });
+
+        // B. Lấy Chi phí nhập hàng
+        CompletableFuture<List<RawImportHistory>> importFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                // Lưu ý: Supplier Controller nhận LocalDateTime, nên chuỗi String.format là ổn
+                String url = String.format("http://supplier-service/api/suppliers/history?startDate=%s&endDate=%s", startDateTime, endDateTime);
+                return restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<RawImportHistory>>() {}).getBody();
+            } catch (Exception e) { return new ArrayList<>(); }
+        });
+
+        CompletableFuture.allOf(revenueFuture, importFuture).join();
+        
+        List<DailyRevenueChartItem> revenues = revenueFuture.join();
+        List<RawImportHistory> imports = importFuture.join();
+
+        // Tổng hợp dữ liệu
+        Map<Integer, Double> revenueByDay = new HashMap<>();
+        if (revenues != null) {
+            for (DailyRevenueChartItem item : revenues) {
+                revenueByDay.put(item.getDate().getDayOfMonth(), item.getRevenue());
+            }
+        }
+
+        Map<Integer, Double> importCostByDay = new HashMap<>();
+        Map<Integer, Integer> importCountByDay = new HashMap<>();
+        
+        if (imports != null) {
+            for (RawImportHistory item : imports) {
+                
+                try {
+                    Instant instant = Instant.parse(item.getImportDate());
+                    int day = instant.atZone(ZoneId.systemDefault()).getDayOfMonth();
+                    
+                    double cost = item.getQuantityAdded() * item.getPricePerUnit();
+                    importCostByDay.merge(day, cost, Double::sum);
+                    importCountByDay.merge(day, 1, Integer::sum);
+                } catch (Exception e) {
+                    logger.error("Lỗi parse ngày nhập: " + item.getImportDate(), e);
+                }
+            }
+        }
+
+        // Xây dựng CSV
+        csv.append("BAO CAO KINH DOANH THANG ").append(month).append("/").append(year).append("\n");
+        csv.append("Ngay tao,").append(LocalDate.now()).append("\n\n");
+        csv.append("Ngay,Doanh Thu (VND),Chi Phi Nhap (VND),Loi Nhuan Gop (VND),Ghi Chu\n");
+
+        double totalRevenue = 0;
+        double totalImportCost = 0;
+        int daysInMonth = end.getDayOfMonth();
+
+        for (int i = 1; i <= daysInMonth; i++) {
+            double rev = revenueByDay.getOrDefault(i, 0.0);
+            double imp = importCostByDay.getOrDefault(i, 0.0);
+            double profit = rev - imp;
+            int importTimes = importCountByDay.getOrDefault(i, 0);
+
+            totalRevenue += rev;
+            totalImportCost += imp;
+
+            csv.append(i).append("/").append(month).append("/").append(year).append(",")
+               .append(String.format("%.0f", rev)).append(",")
+               .append(String.format("%.0f", imp)).append(",")
+               .append(String.format("%.0f", profit)).append("\n");
+        }
+
+        csv.append("TONG CONG,")
+           .append(String.format("%.0f", totalRevenue)).append(",")
+           .append(String.format("%.0f", totalImportCost)).append(",")
+           .append(String.format("%.0f", totalRevenue - totalImportCost)).append("\n");
+
+        return ("\uFEFF" + csv.toString()).getBytes(StandardCharsets.UTF_8);
     }
 }

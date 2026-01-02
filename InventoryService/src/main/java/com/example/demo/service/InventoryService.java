@@ -1,25 +1,26 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.CreateItemRequest;
+import com.example.demo.dto.ImportHistoryRequest;
 import com.example.demo.dto.InventoryResponseDTO;
 import com.example.demo.dto.UpdateStockRequest;
 import com.example.demo.dto.ImportItemDTO; 
 import com.example.demo.model.Category;
 import com.example.demo.model.InventoryItem;
 import com.example.demo.model.STATUS;
-import com.example.demo.model.ImportHistory; 
 import com.example.demo.repository.CategoryRepository;
 import com.example.demo.repository.InventoryRepository;
-import com.example.demo.repository.ImportHistoryRepository; 
 
 import jakarta.persistence.EntityNotFoundException; 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
-import java.time.Instant; 
+import java.time.LocalDateTime;
 import java.util.ArrayList; 
 import java.util.List; 
 import java.util.Map; 
@@ -33,15 +34,22 @@ public class InventoryService {
     private InventoryRepository inventoryRepository;
     @Autowired
     private CategoryRepository categoryRepository; 
+    
+    // --- Code của Team Leader: Dùng RestTemplate để gọi qua SupplierService ---
     @Autowired
-    private ImportHistoryRepository importHistoryRepository; 
+    private RestTemplate restTemplate;
+
+    @Value("${supplier.service.name:supplier-service}")
+    private String supplierServiceName;
+
+    // --- Code của BẠN: Giữ lại hàm này để Controller của bạn hoạt động ---
+    @Transactional(readOnly = true)
     public List<InventoryItem> getItemsBySupplier(Long supplierId) {
-    return inventoryRepository.findBySupplierIdForHistory(supplierId);
-}
-    
-    
-  
-    
+        // Lưu ý: Đảm bảo InventoryRepository có method findBySupplierId(Long id)
+        // Nếu method findBySupplierIdForHistory cũ đã xóa, hãy dùng findBySupplierId
+        return inventoryRepository.findBySupplierId(supplierId);
+    }
+
     @Transactional(readOnly = true) 
     public Page<InventoryResponseDTO> getAllItems(String search, Long categoryId, Pageable pageable) {
         Page<InventoryItem> inventoryData = inventoryRepository.findAllWithCategory(search, categoryId, pageable);
@@ -60,16 +68,6 @@ public class InventoryService {
             .map(this::mapToInventoryDTO) 
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy InventoryItem với ID: " + id));
     }
-
-  
-    @Transactional(readOnly = true)
-    public List<ImportHistory> getImportHistoryBySupplier(Long supplierId) {
-        if (supplierId != null) {
-
-            return importHistoryRepository.findAll(); 
-        }
-        return importHistoryRepository.findAll();
-    }
     
     @Transactional(readOnly = true)
     public Category getCategory(Long id) {
@@ -81,9 +79,16 @@ public class InventoryService {
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }
-    
-    // --- 2. CÁC HÀM THÊM / SỬA / XÓA ---
 
+    // --- Code của Team Leader: Lấy toàn bộ danh sách (List) ---
+    @Transactional(readOnly = true)
+    public List<InventoryResponseDTO> getAllItemsList() {
+        return inventoryRepository.findAll()
+                .stream()
+                .map(this::mapToInventoryDTO)
+                .collect(Collectors.toList());
+    }
+    
     @Transactional
     public InventoryResponseDTO addFruit(CreateItemRequest request) {
         if (inventoryRepository.findByName(request.getName()).isPresent()) {
@@ -96,9 +101,8 @@ public class InventoryService {
         newItem.setPrice(request.getPrice());
         newItem.setSupplierId(request.getSupplierId());
         
-        
         if (request.getQuantity() == 0) {
-        	newItem.setStatus(STATUS.SOLDOUT);
+            newItem.setStatus(STATUS.SOLDOUT);
         }
         else if (request.getQuantity() < 50) {
             newItem.setStatus(STATUS.LOW);
@@ -141,6 +145,7 @@ public class InventoryService {
         return mapToInventoryDTO(updatedItem);
     }
 
+    // --- LOGIC GỘP QUAN TRỌNG: Cập nhật kho + Gửi thông tin sang SupplierService ---
     @Transactional
     public void importStock(List<ImportItemDTO> itemsToImport) {
         List<Long> itemIds = itemsToImport.stream()
@@ -151,7 +156,7 @@ public class InventoryService {
         Map<Long, InventoryItem> itemMap = itemsInDb.stream()
             .collect(Collectors.toMap(InventoryItem::getId, item -> item));
         
-        List<ImportHistory> historyList = new ArrayList<>();
+        List<ImportHistoryRequest> historyRequests = new ArrayList<>();
 
         for (ImportItemDTO importItem : itemsToImport) {
             InventoryItem item = itemMap.get(importItem.itemId());
@@ -160,6 +165,7 @@ public class InventoryService {
                 item.setQuantity(newQuantity);
                 item.setPrice(importItem.price()); 
                 
+                // Cập nhật trạng thái (Logic của bạn chuẩn hơn: 0 mới là SoldOut)
                 if (newQuantity == 0) {
                     item.setStatus(STATUS.SOLDOUT);
                 } else if (newQuantity < 50) {
@@ -168,45 +174,59 @@ public class InventoryService {
                     item.setStatus(STATUS.AVAILABLE);
                 }
                 
-                ImportHistory history = new ImportHistory();
-                history.setItemId(item.getId());
-                history.setSupplierId(item.getSupplierId());
-                history.setQuantityAdded(importItem.quantityToAdd());
-                history.setPricePerUnit(importItem.price());
-                history.setImportDate(Instant.now());
-                historyList.add(history);
+                // Tạo Request gửi sang Supplier Service
+                ImportHistoryRequest req = new ImportHistoryRequest();
+                req.setSupplierId(item.getSupplierId());
+                req.setItemId(item.getId());
+                req.setItemName(item.getName());
+                req.setQuantityAdded(importItem.quantityToAdd());
+                req.setPricePerUnit(importItem.price());
+                req.setImportDate(LocalDateTime.now());
+                
+                historyRequests.add(req);
             } 
         }
+        
         inventoryRepository.saveAll(itemsInDb);
-        importHistoryRepository.saveAll(historyList); 
+        
+        // Gửi sang SupplierService (Code của Team Leader)
+        if (!historyRequests.isEmpty()) {
+            try {
+                String supplierUrl = "http://" + supplierServiceName + "/api/suppliers/history/batch";
+                restTemplate.postForObject(supplierUrl, historyRequests, Void.class);
+            } catch (Exception e) {
+                System.err.println("Lỗi khi lưu lịch sử nhập hàng sang Supplier Service: " + e.getMessage());
+                // Không throw exception để tránh rollback việc cập nhật kho
+            }
+        }
     }
     
     public InventoryItem updateStock(Long id, UpdateStockRequest request) {
-		InventoryItem item = inventoryRepository.findById(id)
-	            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Item (để cập nhật kho) với ID: " + id));
+        InventoryItem item = inventoryRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Item (để cập nhật kho) với ID: " + id));
 
-	        int newQuantity = request.getNewQuantity();
-	        item.setQuantity(newQuantity);
-	        
-	        if (newQuantity == 0) {
-	             item.setStatus(STATUS.SOLDOUT);
-	        } else if (newQuantity < 50) {
-	            item.setStatus(STATUS.LOW);
-	        } else {
-	            item.setStatus(STATUS.AVAILABLE);
-	        }
-	        return inventoryRepository.save(item);
-	}
+            int newQuantity = request.getNewQuantity();
+            item.setQuantity(newQuantity);
+            
+            if (newQuantity == 0) {
+                 item.setStatus(STATUS.SOLDOUT);
+            } else if (newQuantity < 50) {
+                item.setStatus(STATUS.LOW);
+            } else {
+                item.setStatus(STATUS.AVAILABLE);
+            }
+            return inventoryRepository.save(item);
+    }
     
     @Transactional(readOnly=true)
     public Page<InventoryResponseDTO> getLowStockItem(Pageable pageable){
-    	Page<InventoryItem> itemData= inventoryRepository.getLowStockItem(pageable);
-    	return itemData.map(this::mapToInventoryDTO);
+        Page<InventoryItem> itemData= inventoryRepository.getLowStockItem(pageable);
+        return itemData.map(this::mapToInventoryDTO);
     }
     
     @Transactional(readOnly=true)
     public int getTotalQuantity() {
-    	return inventoryRepository.getTotalQuantity();
+        return inventoryRepository.getTotalQuantity();
     }
 
    
@@ -217,8 +237,6 @@ public class InventoryService {
         a.setPrice(data.getPrice());
         a.setQuantity(data.getQuantity());
         a.setSupplierId(data.getSupplierId());
-        
-        //  THÊM DÒNG NÀY ĐỂ LẤY NGÀY TỪ DATABASE LÊN
         a.setAddedDate(data.getCreatedAt()); 
 
         if (data.getCategory() != null) {

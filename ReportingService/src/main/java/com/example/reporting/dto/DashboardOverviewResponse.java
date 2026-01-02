@@ -29,6 +29,7 @@ public class DashboardOverviewResponse {
     @AllArgsConstructor
     public static class InventorySummary {
         private int totalQuantity;    // Tổng số lượng (kg)
+        private long lowStockCount;
     }
 
     @Data
@@ -74,4 +75,5 @@ public class DashboardOverviewResponse {
         private String status;
         private String categoryName;
     }
+    
 }

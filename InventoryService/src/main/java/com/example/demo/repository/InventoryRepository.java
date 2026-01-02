@@ -56,4 +56,6 @@ public interface InventoryRepository extends JpaRepository<InventoryItem, Long> 
     @Query(value = "SELECT i FROM InventoryItem i LEFT JOIN FETCH i.category c WHERE i.status = 'LOW' OR i.status = 'SOLDOUT'",
             countQuery = "SELECT count(i) FROM InventoryItem i WHERE i.status = 'LOW' OR i.status = 'SOLDOUT'")
      Page<InventoryItem> getLowStockItem(Pageable pageable);
+
+     List<InventoryItem> findBySupplierId(Long supplierId);
 }

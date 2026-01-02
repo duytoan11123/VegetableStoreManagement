@@ -41,7 +41,7 @@ public class OrderService {
     private String inventoryService;
     @Value("${payment.service.name}")
     private String paymentService;
-    @Value("${customer.service.name}")
+    @Value("${customer.service.name}")      
     private String customerService;
     
     @Transactional
@@ -90,7 +90,7 @@ public class OrderService {
             // Nếu không ném lỗi, nghĩa là thanh toán thành công
             
         } catch (Exception e) {
-            // Thanh toán thất bại!
+            // Thanh toán thất bại
             savedOrder.setStatus(OrderStatus.FAILED);
             orderRepository.save(savedOrder);
             throw new RuntimeException("Thanh toán thất bại: " + e.getMessage());
@@ -244,19 +244,9 @@ public class OrderService {
     
     public List<BestsellerDTO> getBestSellingItems(int limit) {
         Pageable pageable = PageRequest.of(0, limit);
-        
-        // 1. Lấy dữ liệu thô (Projection) từ Repository
-        List<BestsellerProjection> projections = orderRepository.findBestsellers(pageable);
-        
-        // 2. Chuyển đổi sang DTO (Mapping thủ công)
-        return projections.stream()
-            .map(p -> new BestsellerDTO(
-                p.getProductId(),
-                p.getProductName(),
-                p.getTotalQuantitySold()
-            ))
-            .collect(Collectors.toList());
+        return orderRepository.findBestsellers(pageable);
     }
+
     public List<DailyRevenueDTO> getRevenueChartData(int days) {
         LocalDateTime startDate = LocalDate.now().minusDays(days - 1).atStartOfDay();
         List<DailyRevenueProjection> rawData = orderRepository.getDailyRevenueSince(startDate);

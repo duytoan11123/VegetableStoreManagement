@@ -17,13 +17,13 @@ export function formatLargeNumber(num: number): string {
     const absNum = Math.abs(num);
 
     if (absNum >= 1_000_000_000) {
-        return format(num / 1_000_000_000, 'Tỷ', 3); 
+        return format(num / 1_000_000_000, 'B', 3);
     }
     if (absNum >= 1_000_000) {
-        return format(num / 1_000_000, 'Triệu', 3);
+        return format(num / 1_000_000, 'M', 3);
     }
     if (absNum >= 1_000) {
-        return format(num / 1_000, 'Nghìn', 3); 
+        return format(num / 1_000, 'K', 3);
     }
     return num.toLocaleString('vi-VN');
 }

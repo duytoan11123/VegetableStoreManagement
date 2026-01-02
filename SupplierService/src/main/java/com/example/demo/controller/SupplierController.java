@@ -2,10 +2,21 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.CreateSupplierRequest;
 import com.example.demo.dto.EditSupplierRequest;
+import com.example.demo.dto.ImportHistoryRequest;
+import com.example.demo.model.ImportHistory;
 import com.example.demo.model.Supplier;
+import com.example.demo.repository.ImportHistoryRepository;
 import com.example.demo.service.SupplierService;
 
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.List;
+
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +29,16 @@ public class SupplierController {
     @Autowired
     private SupplierService supplierService;
 
+
     // 👇 1. KHAI BÁO INVENTORY SERVICE
+
+
+    @Autowired
+    private ImportHistoryRepository importHistoryRepository; 
+    /**
+     * Endpoint cho: ThêmNhàCungCấp()
+     * POST /api/suppliers
+     */
 
     @PostMapping
     public ResponseEntity<Supplier> addSupplier(@RequestBody CreateSupplierRequest request) {
@@ -32,7 +52,21 @@ public class SupplierController {
         return ResponseEntity.ok(supplier);
     }
     
-    @PutMapping("/{id}")
+    @GetMapping("/history")
+    public ResponseEntity<List<ImportHistory>> getImportHistory(
+            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+    ) {
+        // (QUAN TRỌNG) Chuyển đổi LocalDateTime (Local) -> Instant (UTC) để khớp với Entity
+        Instant start = startDate.atZone(ZoneId.systemDefault()).toInstant();
+        Instant end = endDate.atZone(ZoneId.systemDefault()).toInstant();
+
+        // Gọi trực tiếp Repository để tối ưu
+        return ResponseEntity.ok(importHistoryRepository.findByImportDateBetween(start, end));
+    }
+    
+    @PutMapping("{id}")
+
     public ResponseEntity<Supplier> editSupplier(@PathVariable(value = "id") Long id, @RequestBody EditSupplierRequest request){
         Supplier editedSupplier = supplierService.updateSupplier(id, request);
         return new ResponseEntity<>(editedSupplier, HttpStatus.OK);
@@ -51,5 +85,12 @@ public class SupplierController {
         List<Supplier> suppliers = supplierService.getAllSuppliers(search);
         return ResponseEntity.ok(suppliers);
     }
-    
+
+
+    @PostMapping("/history/batch")
+    public ResponseEntity<Void> saveImportHistoryBatch(@RequestBody List<ImportHistoryRequest> requests) {
+        supplierService.saveImportHistoryBatch(requests);
+        return ResponseEntity.ok().build();
+    }
+
 }

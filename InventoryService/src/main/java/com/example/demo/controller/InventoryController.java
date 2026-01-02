@@ -58,7 +58,13 @@ public class InventoryController {
         InventoryResponseDTO newItemDTO = inventoryService.addFruit(request);
         return new ResponseEntity<>(newItemDTO, HttpStatus.CREATED);
     }
-
+    
+    @PostMapping("/import-stock")
+    public ResponseEntity<Void> importStock(@RequestBody List<ImportItemDTO> itemsToImport) {
+        inventoryService.importStock(itemsToImport);
+        return ResponseEntity.ok().build();
+    }
+    
     @DeleteMapping("/items/{id}")
     public ResponseEntity<Void> deleteInventoryItem(@PathVariable("id") Long id) {
         inventoryService.deleteItem(id);
@@ -73,12 +79,6 @@ public class InventoryController {
         InventoryResponseDTO updatedItemDTO = inventoryService.updateItem(id, request);
         return ResponseEntity.ok(updatedItemDTO);
     }
-
-    @PostMapping("/import-stock")
-    public ResponseEntity<Void> importStock(@RequestBody List<ImportItemDTO> itemsToImport) {
-        inventoryService.importStock(itemsToImport);
-        return ResponseEntity.ok().build();
-    }
     
     @PutMapping("/items/{id}/stock")
     public ResponseEntity<Void> updateStock(
@@ -88,10 +88,18 @@ public class InventoryController {
         inventoryService.updateStock(id, request);
         return ResponseEntity.ok().build();
     }
+
     @GetMapping("/supplier/{supplierId}")
     public ResponseEntity<List<InventoryItem>> getItemsBySupplier(@PathVariable("supplierId") Long supplierId) {
       
         List<InventoryItem> items = inventoryService.getItemsBySupplier(supplierId);
         return ResponseEntity.ok(items);
+    }
+    
+    
+    @GetMapping("/items/all")
+    public ResponseEntity<List<InventoryResponseDTO>> getAllItemsList() {
+        return ResponseEntity.ok(inventoryService.getAllItemsList());
+
     }
 }
