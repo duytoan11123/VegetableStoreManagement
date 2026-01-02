@@ -6,7 +6,7 @@ import com.example.demo.dto.UpdateStockRequest;
 import com.example.demo.dto.ImportItemDTO;
 import com.example.demo.model.Category; 
 import com.example.demo.service.InventoryService;
-
+import com.example.demo.model.InventoryItem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -87,5 +87,11 @@ public class InventoryController {
     {
         inventoryService.updateStock(id, request);
         return ResponseEntity.ok().build();
+    }
+    @GetMapping("/supplier/{supplierId}")
+    public ResponseEntity<List<InventoryItem>> getItemsBySupplier(@PathVariable("supplierId") Long supplierId) {
+      
+        List<InventoryItem> items = inventoryService.getItemsBySupplier(supplierId);
+        return ResponseEntity.ok(items);
     }
 }

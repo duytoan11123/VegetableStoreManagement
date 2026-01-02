@@ -5,12 +5,13 @@
  * (Giả định dựa trên API Backend)
  */
 export interface Supplier {
-    id: number;
-    name: string;
-    contactPerson: string;
-    phone: string;
-    email: string;
-    address: string;
+  id: number;
+  name: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  address: string;
+  description?: string; // Mô tả các loại trái cây / hàng hóa mà NCC cung cấp
 }
 
 /**
@@ -19,25 +20,25 @@ export interface Supplier {
  */
 export interface SupplierPageData {
   content: Supplier[]; // Mảng chứa dữ liệu của trang hiện tại
-  totalPages: number;     // Tổng số trang
-  totalElements: number;  // Tổng số phần tử
-  number: number;         // Số trang hiện tại (bắt đầu từ 0)
-  size: number;           // Kích thước trang
-  first: boolean;         // Là trang đầu tiên?
-  last: boolean;          // Là trang cuối cùng?
+  totalPages: number; // Tổng số trang
+  totalElements: number; // Tổng số phần tử
+  number: number; // Số trang hiện tại (bắt đầu từ 0)
+  size: number; // Kích thước trang
+  first: boolean; // Là trang đầu tiên?
+  last: boolean; // Là trang cuối cùng?
 }
 
 export interface ImportItemDTO {
-    itemId: number;
-    quantityToAdd: number;
+  itemId: number;
+  quantityToAdd: number;
 }
 
 export interface ImportGoodsModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccessRefresh: () => void; 
-    supplierId: number | null;
-    supplierName: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccessRefresh: () => void;
+  supplierId: number | null;
+  supplierName: string | null;
 }
 
 export type ImportFormState = Record<string, number | string>;

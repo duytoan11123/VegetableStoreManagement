@@ -7,10 +7,10 @@ import com.example.demo.dto.ImportItemDTO;
 import com.example.demo.model.Category;
 import com.example.demo.model.InventoryItem;
 import com.example.demo.model.STATUS;
-import com.example.demo.model.ImportHistory; // 👈 (THÊM MỚI)
+import com.example.demo.model.ImportHistory; 
 import com.example.demo.repository.CategoryRepository;
 import com.example.demo.repository.InventoryRepository;
-import com.example.demo.repository.ImportHistoryRepository; // 👈 (THÊM MỚI)
+import com.example.demo.repository.ImportHistoryRepository; 
 
 import jakarta.persistence.EntityNotFoundException; 
 import org.springframework.data.domain.Page;
@@ -19,8 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant; // 👈 (THÊM MỚI)
-import java.util.ArrayList; // 👈 (THÊM MỚI)
+import java.time.Instant; 
+import java.util.ArrayList; 
 import java.util.List; 
 import java.util.Map; 
 import java.util.stream.Collectors; 
@@ -35,6 +35,12 @@ public class InventoryService {
     private CategoryRepository categoryRepository; 
     @Autowired
     private ImportHistoryRepository importHistoryRepository; 
+    public List<InventoryItem> getItemsBySupplier(Long supplierId) {
+    return inventoryRepository.findBySupplierIdForHistory(supplierId);
+}
+    
+    
+  
     
     @Transactional(readOnly = true) 
     public Page<InventoryResponseDTO> getAllItems(String search, Long categoryId, Pageable pageable) {
@@ -54,6 +60,16 @@ public class InventoryService {
             .map(this::mapToInventoryDTO) 
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy InventoryItem với ID: " + id));
     }
+
+  
+    @Transactional(readOnly = true)
+    public List<ImportHistory> getImportHistoryBySupplier(Long supplierId) {
+        if (supplierId != null) {
+
+            return importHistoryRepository.findAll(); 
+        }
+        return importHistoryRepository.findAll();
+    }
     
     @Transactional(readOnly = true)
     public Category getCategory(Long id) {
@@ -66,6 +82,8 @@ public class InventoryService {
         return categoryRepository.findAll();
     }
     
+    // --- 2. CÁC HÀM THÊM / SỬA / XÓA ---
+
     @Transactional
     public InventoryResponseDTO addFruit(CreateItemRequest request) {
         if (inventoryRepository.findByName(request.getName()).isPresent()) {
@@ -77,7 +95,9 @@ public class InventoryService {
         newItem.setQuantity(request.getQuantity());
         newItem.setPrice(request.getPrice());
         newItem.setSupplierId(request.getSupplierId());
-        if (request.getQuantity() ==0) {
+        
+        
+        if (request.getQuantity() == 0) {
         	newItem.setStatus(STATUS.SOLDOUT);
         }
         else if (request.getQuantity() < 50) {
@@ -109,7 +129,8 @@ public class InventoryService {
         itemToUpdate.setPrice(request.getPrice());
         itemToUpdate.setSupplierId(request.getSupplierId());
         itemToUpdate.setCategory(category); 
-        if (request.getQuantity() ==0) {
+        
+        if (request.getQuantity() == 0) {
              itemToUpdate.setStatus(STATUS.SOLDOUT);
         } else if (request.getQuantity() < 50) {
             itemToUpdate.setStatus(STATUS.LOW);
@@ -120,7 +141,6 @@ public class InventoryService {
         return mapToInventoryDTO(updatedItem);
     }
 
-   
     @Transactional
     public void importStock(List<ImportItemDTO> itemsToImport) {
         List<Long> itemIds = itemsToImport.stream()
@@ -131,18 +151,16 @@ public class InventoryService {
         Map<Long, InventoryItem> itemMap = itemsInDb.stream()
             .collect(Collectors.toMap(InventoryItem::getId, item -> item));
         
-        // (THÊM MỚI) Tạo danh sách lịch sử
         List<ImportHistory> historyList = new ArrayList<>();
 
         for (ImportItemDTO importItem : itemsToImport) {
             InventoryItem item = itemMap.get(importItem.itemId());
             if (item != null) {
-                // 1. Cập nhật Item
                 int newQuantity = item.getQuantity() + importItem.quantityToAdd();
                 item.setQuantity(newQuantity);
                 item.setPrice(importItem.price()); 
                 
-                if (newQuantity ==0) {
+                if (newQuantity == 0) {
                     item.setStatus(STATUS.SOLDOUT);
                 } else if (newQuantity < 50) {
                     item.setStatus(STATUS.LOW);
@@ -150,7 +168,6 @@ public class InventoryService {
                     item.setStatus(STATUS.AVAILABLE);
                 }
                 
-                // 2. (THÊM MỚI) Tạo bản ghi Lịch sử
                 ImportHistory history = new ImportHistory();
                 history.setItemId(item.getId());
                 history.setSupplierId(item.getSupplierId());
@@ -160,8 +177,6 @@ public class InventoryService {
                 historyList.add(history);
             } 
         }
-        
-
         inventoryRepository.saveAll(itemsInDb);
         importHistoryRepository.saveAll(historyList); 
     }
@@ -173,7 +188,6 @@ public class InventoryService {
 	        int newQuantity = request.getNewQuantity();
 	        item.setQuantity(newQuantity);
 	        
-	        // Cập nhật lại Status
 	        if (newQuantity == 0) {
 	             item.setStatus(STATUS.SOLDOUT);
 	        } else if (newQuantity < 50) {
@@ -194,6 +208,8 @@ public class InventoryService {
     public int getTotalQuantity() {
     	return inventoryRepository.getTotalQuantity();
     }
+
+   
     private InventoryResponseDTO mapToInventoryDTO(InventoryItem data) {
         InventoryResponseDTO a = new InventoryResponseDTO();
         a.setId(data.getId());
@@ -201,6 +217,10 @@ public class InventoryService {
         a.setPrice(data.getPrice());
         a.setQuantity(data.getQuantity());
         a.setSupplierId(data.getSupplierId());
+        
+        //  THÊM DÒNG NÀY ĐỂ LẤY NGÀY TỪ DATABASE LÊN
+        a.setAddedDate(data.getCreatedAt()); 
+
         if (data.getCategory() != null) {
             a.setCategoryName(data.getCategory().getName());
         }
@@ -209,6 +229,4 @@ public class InventoryService {
         }
         return a;
     }
-    
-
 }

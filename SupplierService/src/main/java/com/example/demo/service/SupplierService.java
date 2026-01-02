@@ -4,6 +4,7 @@ import com.example.demo.dto.CreateSupplierRequest;
 import com.example.demo.dto.EditSupplierRequest;
 import com.example.demo.model.Supplier;
 import com.example.demo.repository.SupplierRepository;
+// import of import-record feature removed
 import jakarta.persistence.EntityNotFoundException;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class SupplierService {
     private SupplierRepository supplierRepository;
 
 
+
     public Supplier addSupplier(CreateSupplierRequest request) {
         Supplier supplier = new Supplier();
         supplier.setName(request.getName());
@@ -25,7 +27,9 @@ public class SupplierService {
         supplier.setEmail(request.getEmail());
         supplier.setPhone(request.getPhone());
         supplier.setAddress(request.getAddress());
-        
+        // Lưu thêm trường mô tả nếu có
+        supplier.setDescription(request.getDescription());
+
         return supplierRepository.save(supplier);
     }
 
@@ -42,6 +46,8 @@ public class SupplierService {
     	supplier.setEmail(request.getEmail());
     	supplier.setName(request.getName());
     	supplier.setPhone(request.getPhone());
+    	// Cập nhật mô tả
+    	supplier.setDescription(request.getDescription());
     	return supplierRepository.save(supplier);
     }
     
@@ -59,4 +65,6 @@ public class SupplierService {
             return supplierRepository.findAll();
         }
     }
+
+    // import history feature removed
 }

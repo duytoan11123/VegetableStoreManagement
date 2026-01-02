@@ -18,6 +18,8 @@ public class Supplier {
 
     @Column(nullable = false)
     private String name; 
+    @Column(name = "description", length = 500) 
+    private String description;
 
     private String contactPerson; 
     
