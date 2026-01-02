@@ -1,0 +1,85 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-EurekaServerApplication<EurekaServer>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.example.demo.EurekaServerApplication",
+      "projectName": "EurekaServer",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-ApiGatewayApplication<APIGateway>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.example.demo.ApiGatewayApplication",
+      "projectName": "APIGateway",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-CustomerServiceApplication<CustomerService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.example.demo.CustomerServiceApplication",
+      "projectName": "CustomerService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-InventoryServiceApplication<InventoryService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.example.demo.InventoryServiceApplication",
+      "projectName": "InventoryService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-OrderServiceApplication<OrderSerivce>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.example.orders.OrderServiceApplication",
+      "projectName": "OrderSerivce",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-PaymentServiceApplication<PaymentService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.example.payment.PaymentServiceApplication",
+      "projectName": "PaymentService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env",
+      "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=63410 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=PaymentService"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-ReportingServiceApplication<ReportingService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.example.reporting.ReportingServiceApplication",
+      "projectName": "ReportingService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-SupplierServiceApplication<SupplierService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.example.demo.SupplierServiceApplication",
+      "projectName": "SupplierService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
