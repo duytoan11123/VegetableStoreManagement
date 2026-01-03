@@ -247,29 +247,30 @@ public class OrderService {
         return orderRepository.findBestsellers(pageable);
     }
 
-    public List<DailyRevenueDTO> getRevenueChartData(int days) {
-        LocalDateTime startDate = LocalDate.now().minusDays(days - 1).atStartOfDay();
-        List<DailyRevenueProjection> rawData = orderRepository.getDailyRevenueSince(startDate);
+    public List<DailyRevenueDTO> getRevenueChartData(LocalDate startDate, LocalDate endDate, int days) {
+        if (startDate == null || endDate == null) {
+            endDate = LocalDate.now();
+            startDate = endDate.minusDays(days - 1);
+        }
         
-        //Chuyển List Projection thành Map để tra cứu nhanh
-        // Key: LocalDate, Value: Double
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX); 
+
+        List<DailyRevenueProjection> rawData = orderRepository.getDailyRevenueBetween(startDateTime, endDateTime);
+        
         Map<LocalDate, Double> revenueMap = rawData.stream()
             .collect(Collectors.toMap(
                 DailyRevenueProjection::getDate, 
-                // Kiểm tra null an toàn
-                projection -> projection.getRevenue() != null ? projection.getRevenue() : 0.0
+                p -> p.getRevenue() != null ? p.getRevenue() : 0.0
             ));
         
-        // Tạo danh sách DTO đầy đủ (lấp đầy các ngày trống bằng 0)
         List<DailyRevenueDTO> fullData = new ArrayList<>();
-        for (int i = 0; i < days; i++) {
-            // Chạy từ ngày cũ nhất đến hôm nay
-            LocalDate date = LocalDate.now().minusDays(days - 1 - i);
-            
-            // Lấy doanh thu từ Map, nếu không có thì mặc định là 0.0
-            Double revenue = revenueMap.getOrDefault(date, 0.0);
-            
-            fullData.add(new DailyRevenueDTO(date, revenue));
+        
+        LocalDate current = startDate;
+        while (!current.isAfter(endDate)) {
+            Double revenue = revenueMap.getOrDefault(current, 0.0);
+            fullData.add(new DailyRevenueDTO(current, revenue));
+            current = current.plusDays(1);
         }
         
         return fullData;

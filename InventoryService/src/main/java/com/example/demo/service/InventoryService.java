@@ -35,18 +35,15 @@ public class InventoryService {
     @Autowired
     private CategoryRepository categoryRepository; 
     
-    // --- Code của Team Leader: Dùng RestTemplate để gọi qua SupplierService ---
     @Autowired
     private RestTemplate restTemplate;
 
     @Value("${supplier.service.name:supplier-service}")
     private String supplierServiceName;
 
-    // --- Code của BẠN: Giữ lại hàm này để Controller của bạn hoạt động ---
     @Transactional(readOnly = true)
     public List<InventoryItem> getItemsBySupplier(Long supplierId) {
-        // Lưu ý: Đảm bảo InventoryRepository có method findBySupplierId(Long id)
-        // Nếu method findBySupplierIdForHistory cũ đã xóa, hãy dùng findBySupplierId
+
         return inventoryRepository.findBySupplierId(supplierId);
     }
 
@@ -145,7 +142,6 @@ public class InventoryService {
         return mapToInventoryDTO(updatedItem);
     }
 
-    // --- LOGIC GỘP QUAN TRỌNG: Cập nhật kho + Gửi thông tin sang SupplierService ---
     @Transactional
     public void importStock(List<ImportItemDTO> itemsToImport) {
         List<Long> itemIds = itemsToImport.stream()
@@ -165,7 +161,6 @@ public class InventoryService {
                 item.setQuantity(newQuantity);
                 item.setPrice(importItem.price()); 
                 
-                // Cập nhật trạng thái (Logic của bạn chuẩn hơn: 0 mới là SoldOut)
                 if (newQuantity == 0) {
                     item.setStatus(STATUS.SOLDOUT);
                 } else if (newQuantity < 50) {
@@ -189,14 +184,12 @@ public class InventoryService {
         
         inventoryRepository.saveAll(itemsInDb);
         
-        // Gửi sang SupplierService (Code của Team Leader)
         if (!historyRequests.isEmpty()) {
             try {
                 String supplierUrl = "http://" + supplierServiceName + "/api/suppliers/history/batch";
                 restTemplate.postForObject(supplierUrl, historyRequests, Void.class);
             } catch (Exception e) {
                 System.err.println("Lỗi khi lưu lịch sử nhập hàng sang Supplier Service: " + e.getMessage());
-                // Không throw exception để tránh rollback việc cập nhật kho
             }
         }
     }

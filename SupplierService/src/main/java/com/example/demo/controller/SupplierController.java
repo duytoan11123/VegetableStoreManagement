@@ -10,7 +10,9 @@ import com.example.demo.service.SupplierService;
 
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -54,14 +56,12 @@ public class SupplierController {
     
     @GetMapping("/history")
     public ResponseEntity<List<ImportHistory>> getImportHistory(
-            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        // (QUAN TRỌNG) Chuyển đổi LocalDateTime (Local) -> Instant (UTC) để khớp với Entity
-        Instant start = startDate.atZone(ZoneId.systemDefault()).toInstant();
-        Instant end = endDate.atZone(ZoneId.systemDefault()).toInstant();
+        Instant start = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
 
-        // Gọi trực tiếp Repository để tối ưu
+        Instant end = endDate.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant();
         return ResponseEntity.ok(importHistoryRepository.findByImportDateBetween(start, end));
     }
     

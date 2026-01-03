@@ -184,12 +184,11 @@ public class ReportingService {
     public byte[] exportMonthlyReport(int month, int year) {
         StringBuilder csv = new StringBuilder();
         
+        //  Xác định ngày đầu và cuối tháng (Kiểu LocalDate)
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.with(TemporalAdjusters.lastDayOfMonth());
-        LocalDateTime startDateTime = start.atStartOfDay();
-        LocalDateTime endDateTime = end.atTime(LocalTime.MAX);
 
-        // A. Lấy Doanh thu bán hàng
+        //  Lấy Doanh thu (Order Service)
         CompletableFuture<List<DailyRevenueChartItem>> revenueFuture = CompletableFuture.supplyAsync(() -> {
             try {
                 String url = String.format("http://order-service/api/orders/metrics/revenue-chart?startDate=%s&endDate=%s", start, end);
@@ -197,13 +196,15 @@ public class ReportingService {
             } catch (Exception e) { return new ArrayList<>(); }
         });
 
-        // B. Lấy Chi phí nhập hàng
+        //  Lấy Nhập hàng (Supplier Service)
         CompletableFuture<List<RawImportHistory>> importFuture = CompletableFuture.supplyAsync(() -> {
             try {
-                // Lưu ý: Supplier Controller nhận LocalDateTime, nên chuỗi String.format là ổn
-                String url = String.format("http://supplier-service/api/suppliers/history?startDate=%s&endDate=%s", startDateTime, endDateTime);
+                String url = String.format("http://supplier-service/api/suppliers/history?startDate=%s&endDate=%s", start, end);
                 return restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<RawImportHistory>>() {}).getBody();
-            } catch (Exception e) { return new ArrayList<>(); }
+            } catch (Exception e) {
+                logger.error("Lỗi lấy lịch sử nhập từ Supplier Service", e);
+                return new ArrayList<>();
+            }
         });
 
         CompletableFuture.allOf(revenueFuture, importFuture).join();
@@ -211,34 +212,54 @@ public class ReportingService {
         List<DailyRevenueChartItem> revenues = revenueFuture.join();
         List<RawImportHistory> imports = importFuture.join();
 
-        // Tổng hợp dữ liệu
         Map<Integer, Double> revenueByDay = new HashMap<>();
         if (revenues != null) {
             for (DailyRevenueChartItem item : revenues) {
-                revenueByDay.put(item.getDate().getDayOfMonth(), item.getRevenue());
+                if (item.getDate().getMonthValue() == month && item.getDate().getYear() == year) {
+                    revenueByDay.put(item.getDate().getDayOfMonth(), item.getRevenue());
+                }
             }
         }
 
         Map<Integer, Double> importCostByDay = new HashMap<>();
         Map<Integer, Integer> importCountByDay = new HashMap<>();
         
+        ZoneId zoneId = ZoneId.of("Asia/Ho_Chi_Minh");
+
         if (imports != null) {
             for (RawImportHistory item : imports) {
-                
                 try {
-                    Instant instant = Instant.parse(item.getImportDate());
-                    int day = instant.atZone(ZoneId.systemDefault()).getDayOfMonth();
+                    Instant instant;
+                    if (item.getImportDate() != null && item.getImportDate().contains("T")) {
+                         instant = Instant.parse(item.getImportDate());
+                    } else {
+                         try {
+                             double ts = Double.parseDouble(item.getImportDate());
+                             instant = (ts > 10000000000L) ? Instant.ofEpochMilli((long)ts) : Instant.ofEpochSecond((long)ts);
+                         } catch (NumberFormatException e) {
+                             logger.warn("Không thể parse ngày nhập: {}", item.getImportDate());
+                             continue;
+                         }
+                    }
+
+                    // Chuyển sang LocalDateTime theo múi giờ VN
+                    LocalDateTime ldt = instant.atZone(zoneId).toLocalDateTime();
                     
-                    double cost = item.getQuantityAdded() * item.getPricePerUnit();
-                    importCostByDay.merge(day, cost, Double::sum);
-                    importCountByDay.merge(day, 1, Integer::sum);
+                    // Lọc đúng tháng/năm
+                    if (ldt.getMonthValue() == month && ldt.getYear() == year) {
+                        int day = ldt.getDayOfMonth();
+                        double cost = item.getQuantityAdded() * item.getPricePerUnit();
+                        
+                        importCostByDay.merge(day, cost, Double::sum);
+                        importCountByDay.merge(day, 1, Integer::sum);
+                    }
                 } catch (Exception e) {
-                    logger.error("Lỗi parse ngày nhập: " + item.getImportDate(), e);
+                    logger.error("Lỗi xử lý item nhập hàng ID " + item.getId(), e);
                 }
             }
         }
 
-        // Xây dựng CSV
+        // Xây dựng nội dung CSV
         csv.append("BAO CAO KINH DOANH THANG ").append(month).append("/").append(year).append("\n");
         csv.append("Ngay tao,").append(LocalDate.now()).append("\n\n");
         csv.append("Ngay,Doanh Thu (VND),Chi Phi Nhap (VND),Loi Nhuan Gop (VND),Ghi Chu\n");
@@ -256,10 +277,13 @@ public class ReportingService {
             totalRevenue += rev;
             totalImportCost += imp;
 
+            String note = importTimes > 0 ? "Nhap " + importTimes + " lo" : "";
+
             csv.append(i).append("/").append(month).append("/").append(year).append(",")
                .append(String.format("%.0f", rev)).append(",")
                .append(String.format("%.0f", imp)).append(",")
-               .append(String.format("%.0f", profit)).append("\n");
+               .append(String.format("%.0f", profit)).append(",")
+               .append(note).append("\n");
         }
 
         csv.append("TONG CONG,")

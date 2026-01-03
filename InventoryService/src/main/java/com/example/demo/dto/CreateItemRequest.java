@@ -13,5 +13,5 @@ public class CreateItemRequest {
 	private Long supplierId;
 	private Long categoryId;
 	private STATUS status;
-	private Instant importDate; // Thời gian nhập hàng (tùy chọn)
+	private Instant importDate; 
 }
