@@ -48,3 +48,9 @@ Maven target directory (nếu có sử dụng)
 Thư mục cache và dependencies
 
 /dependency-cache/
+
+# User specific / Secrets
+properties.yaml
+application-secret.properties
+application-secret.yml
+application-secret.yaml

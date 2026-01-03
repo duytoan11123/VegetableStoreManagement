@@ -8,8 +8,12 @@
       "mainClass": "com.example.demo.EurekaServerApplication",
       "projectName": "EurekaServer",
       "args": "",
+<<<<<<< HEAD
       "envFile": "${workspaceFolder}/.env",
       "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=51403 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=EurekaServer"
+=======
+      "envFile": "${workspaceFolder}/.env"
+>>>>>>> 5166d4898a6f62ce517dd580a873dab829d8e7e0
     },
     {
       "type": "java",
@@ -19,8 +23,12 @@
       "mainClass": "com.example.demo.ApiGatewayApplication",
       "projectName": "APIGateway",
       "args": "",
+<<<<<<< HEAD
       "envFile": "${workspaceFolder}/.env",
       "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=62475 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=APIGateway"
+=======
+      "envFile": "${workspaceFolder}/.env"
+>>>>>>> 5166d4898a6f62ce517dd580a873dab829d8e7e0
     },
     {
       "type": "java",
@@ -50,8 +58,12 @@
       "mainClass": "com.example.orders.OrderServiceApplication",
       "projectName": "OrderSerivce",
       "args": "",
+<<<<<<< HEAD
       "envFile": "${workspaceFolder}/.env",
       "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=62392 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=OrderSerivce"
+=======
+      "envFile": "${workspaceFolder}/.env"
+>>>>>>> 5166d4898a6f62ce517dd580a873dab829d8e7e0
     },
     {
       "type": "java",
@@ -61,7 +73,12 @@
       "mainClass": "com.example.payment.PaymentServiceApplication",
       "projectName": "PaymentService",
       "args": "",
+<<<<<<< HEAD
       "envFile": "${workspaceFolder}/.env"
+=======
+      "envFile": "${workspaceFolder}/.env",
+      "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=63410 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=PaymentService"
+>>>>>>> 5166d4898a6f62ce517dd580a873dab829d8e7e0
     },
     {
       "type": "java",

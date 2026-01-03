@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.CreateCategoryRequest;
 import com.example.demo.model.Category;
 import com.example.demo.service.CategoryService;
 
@@ -22,4 +23,17 @@ public class CategoryController {
 	public ResponseEntity<List<Category>> getAll() {
 		return ResponseEntity.ok(categoryService.getAll());
 	}
+	// THÊM MỚI
+    @PostMapping
+    public ResponseEntity<Category> create(@RequestBody CreateCategoryRequest request) {
+        Category newCat = categoryService.create(request.getName());
+        return new ResponseEntity<>(newCat, HttpStatus.CREATED);
+    }
+
+    // XÓA DANH MỤC
+   @DeleteMapping("/{id}")
+public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
+    categoryService.delete(id);
+    return ResponseEntity.ok().build();
+}
 }
