@@ -1,5 +1,5 @@
 "use client"; // BẮT BUỘC: Vì component này dùng hook (useEffect, useAuth, useState)
-
+import AddCategoryModal from "./AddCategoryModal";
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthProvider"; // Import hook để lấy token
 import {
@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
+  ChevronDown,
 } from "lucide-react";
 import { formatLargeNumber } from "@/utils/formater_utilities";
 import Spinner from "../commom/Spinner";
@@ -22,7 +23,6 @@ import {
   Supplier,
   Category,
 } from "@/type/Inventory.types";
-
 const PAGE_SIZE = 10;
 
 function useDebounce(value: string, delay: number) {
@@ -75,9 +75,9 @@ export default function InventoryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // State dùng để buộc useEffect fetch lại dữ liệu sau khi Thêm/Sửa/Xóa
   const [refreshKey, setRefreshKey] = useState(0);
-
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const loadData = useCallback(async () => {
     if (isAuthLoading || !token) {
       setIsDataLoading(false);
@@ -140,20 +140,20 @@ export default function InventoryPage() {
       const suppliersDataPromise =
         suppliers.length === 0
           ? fetchSuppliers().catch((err) => {
-              console.warn(
-                "Không thể tải danh sách nhà cung cấp (sẽ hiển thị ID):",
-                err.message
-              );
-              return [] as Supplier[]; // Trả về mảng rỗng nếu lỗi
-            })
+            console.warn(
+              "Không thể tải danh sách nhà cung cấp (sẽ hiển thị ID):",
+              err.message
+            );
+            return [] as Supplier[]; // Trả về mảng rỗng nếu lỗi
+          })
           : Promise.resolve(suppliers); // Dùng lại mảng cũ nếu đã có
 
       const categoriesDataPromise =
         categories.length === 0
           ? fetchCategories().catch((err) => {
-              console.warn("Không thể tải danh sách danh mục:", err.message);
-              return [] as Category[];
-            })
+            console.warn("Không thể tải danh sách danh mục:", err.message);
+            return [] as Category[];
+          })
           : Promise.resolve(categories);
       // Gọi song song
       const [itemsData, suppliersData, categoriesData] = await Promise.all([
@@ -299,7 +299,53 @@ export default function InventoryPage() {
       setFetchError(`Không thể xóa: ${error.message}`);
     }
   };
+  const handleDeleteCategory = async (
+    categoryId: number,
+    categoryName: string
+  ) => {
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn xóa danh mục "${categoryName}" không?\n\nCảnh báo: Chỉ xóa được nếu danh mục này chưa có sản phẩm nào!`
+      )
+    ) {
+      return;
+    }
 
+    if (!hasRole("ADMIN")) {
+      alert("Bạn không có quyền thực hiện hành động này.");
+      return;
+    }
+
+    const backendApiUrl =
+      process.env.NEXT_PUBLIC_BACK_END_API || "http://localhost:8080/api";
+
+    try {
+      const response = await fetch(
+        `${backendApiUrl}/inventory/categories/${categoryId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = "Không thể xóa danh mục";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch { }
+        throw new Error(errorMessage);
+      }
+
+      // Refresh lại categories và bảng sản phẩm
+      setCategories([]); // Buộc fetch lại danh sách mới
+      handleRefresh();
+    } catch (error: any) {
+      alert(error.message || "Lỗi khi xóa danh mục");
+    }
+  };
   const handleEditClick = (item: InventoryItem) => {
     setEditingItem(item);
     setIsModalOpen(true);
@@ -311,6 +357,19 @@ export default function InventoryPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingItem(null);
+  };
+  const handleOpenCategoryModal = () => {
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleCloseCategoryModal = () => {
+    setIsCategoryModalOpen(false);
+  };
+
+  const handleCategoryAdded = () => {
+    // Buộc fetch lại danh sách categories mới (vì trước đó chỉ fetch khi rỗng)
+    setCategories([]);
+    handleRefresh(); // Refresh cả bảng sản phẩm để cập nhật categoryName nếu cần
   };
   if (isAuthLoading) {
     return <Spinner variant="full" text="Đang tải trạng thái xác thực..." />;
@@ -332,14 +391,21 @@ export default function InventoryPage() {
     // Nội dung UI của trang Inventory
     <>
       {hasRole("ADMIN") && (
-        <AddProductModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          onSuccessRefresh={handleRefresh}
-          suppliers={suppliers}
-          categories={categories}
-          itemToEdit={editingItem}
-        />
+        <>
+          <AddProductModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onSuccessRefresh={handleRefresh}
+            suppliers={suppliers}
+            categories={categories}
+            itemToEdit={editingItem}
+          />
+          <AddCategoryModal
+            isOpen={isCategoryModalOpen}
+            onClose={handleCloseCategoryModal}
+            onSuccess={handleCategoryAdded}
+          />
+        </>
       )}
       <h2 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center font-sans tracking-tight mb-8">
         <Warehouse className="w-7 h-7 mr-3 text-green-600" />
@@ -387,24 +453,85 @@ export default function InventoryPage() {
           />
         </div>
 
-        {/* Dropdown Lọc */}
-        <div className="flex-grow w-full md:w-auto">
-          <select
-            className="hover:cursor-pointer text-gray-500 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500"
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+        {/* Dropdown Lọc Danh Mục + Quản lý (xóa) */}
+        <div className="flex-grow w-full md:w-auto relative">
+          {/* Custom Dropdown - Click để mở danh sách */}
+          <button
+            type="button"
+            onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+            className="w-full px-2 py-2 pr-10 text-left text-gray-500 border border-gray-300 rounded-lg bg-white focus:ring-green-500 focus:border-green-500 flex items-center justify-between hover:bg-gray-50 transition"
           >
-            <option value="">Lọc theo Danh Mục</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+            <span>
+              {filterCategory
+                ? categories.find((c) => c.id.toString() === filterCategory)
+                  ?.name || "Lọc theo Danh Mục"
+                : "Lọc theo Danh Mục"}
+            </span>
+            <ChevronDown
+              className={`w-5 h-5 text-gray-400 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""
+                }`}
+            />
+          </button>
+
+          {/* Danh sách dropdown - hiện khi mở */}
+          {isCategoryDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-30 max-h-80 overflow-y-auto">
+              {/* Option "Tất cả" để bỏ lọc */}
+              <div
+                onClick={() => {
+                  setFilterCategory("");
+                  setIsCategoryDropdownOpen(false);
+                }}
+                className="px-4 py-2.5 hover:bg-gray-100 cursor-pointer text-sm text-gray-600"
+              >
+                Tất cả danh mục
+              </div>
+
+              {/* Danh sách danh mục với nút xóa (chỉ ADMIN) */}
+              {categories.map((category) => (
+                <div
+                  key={category.id}
+                  className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-100 transition group"
+                >
+                  <div
+                    onClick={() => {
+                      setFilterCategory(category.id.toString());
+                      setIsCategoryDropdownOpen(false);
+                    }}
+                    className="flex-1 cursor-pointer text-sm text-gray-700 truncate pr-2"
+                  >
+                    {category.name}
+                  </div>
+
+                  {hasRole("ADMIN") && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Ngăn click làm chọn lọc
+                        handleDeleteCategory(category.id, category.name);
+                        setIsCategoryDropdownOpen(false);
+                      }}
+                      className="text-red-500 hover:text-red-700 opacity-70 hover:opacity-100 transition ml-2"
+                      title="Xóa danh mục này"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Click ngoài để đóng dropdown */}
+          {isCategoryDropdownOpen && (
+            <div
+              className="fixed inset-0 z-20"
+              onClick={() => setIsCategoryDropdownOpen(false)}
+            />
+          )}
         </div>
         <div className="flex-grow w-full md:w-auto">
           <select
-            className="hover:cursor-pointer text-gray-500 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500"
+            className="hover:cursor-pointer text-gray-500 w-[100px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500"
             value={filterSupplier}
             onChange={(e) => setFilterSupplier(e.target.value)}
           >
@@ -417,14 +544,26 @@ export default function InventoryPage() {
           </select>
         </div>
         {/* Nút Thêm mới */}
-        <div className="w-full md:w-auto">
+        {/* Nút Thêm mới */}
+        <div className="w-full md:w-auto flex gap-3 flex-wrap justify-end">
           {hasRole("ADMIN") && (
-            <button
-              onClick={handleAddClick} // Mở Modal
-              className="hover:cursor-pointer w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition shadow-md"
-            >
-              <PlusCircle className="w-5 h-5 mr-2" />
-            </button>
+            <>
+              <button
+                onClick={handleAddClick}
+                className="flex items-center justify-center px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition shadow-md"
+              >
+                <PlusCircle className="w-5 h-5 mr-2" />
+                Thêm Sản Phẩm
+              </button>
+
+              <button
+                onClick={handleOpenCategoryModal}
+                className="flex items-center justify-center px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-md"
+              >
+                <PlusCircle className="w-5 h-5 mr-2" />
+                Thêm Danh Mục
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -465,13 +604,8 @@ export default function InventoryPage() {
                   Đơn Giá <ArrowUpDown className="w-4 h-4 ml-1" />
                 </span>
               </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                onClick={() => handleSort("createdAt")}
-              >
-                <span className="flex items-center">
-                  Thời gian nhập <ArrowUpDown className="w-4 h-4 ml-1" />
-                </span>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Nhà Cung Cấp
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Trạng Thái
@@ -522,7 +656,8 @@ export default function InventoryPage() {
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(item.addedDate)}
+                    {supplierMap.get(item.supplierId) ||
+                      `ID: ${item.supplierId}`}
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -534,8 +669,8 @@ export default function InventoryPage() {
                       {item.status === "AVAILABLE"
                         ? "Còn hàng"
                         : item.status === "LOW"
-                        ? "Sắp hết"
-                        : "Hết hàng"}
+                          ? "Sắp hết"
+                          : "Hết hàng"}
                     </span>
                   </td>
                   {hasRole("ADMIN") && (
