@@ -17,4 +17,5 @@ public interface ImportHistoryRepository extends JpaRepository<ImportHistory, Lo
         @Param("startDate") Instant startDate, 
         @Param("endDate") Instant endDate
     );
+    List<ImportHistory> findBySupplierIdOrderByImportDateDesc(Long supplierId);
 }

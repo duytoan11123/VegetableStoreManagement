@@ -53,8 +53,16 @@ public class OrderMetricsController {
      */
     @GetMapping("/revenue-chart")
     public ResponseEntity<List<DailyRevenueDTO>> getRevenueChart(
-            @RequestParam(value="days",defaultValue = "7") int days) {
-        return ResponseEntity.ok(orderService.getRevenueChartData(days));
+            @RequestParam(value = "startDate", required = false) 
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            
+            @RequestParam(value = "endDate", required = false) 
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            
+            @RequestParam(value = "days", defaultValue = "7") int days
+    ) {
+        // Truyền tất cả vào Service để nó tự quyết định
+        return ResponseEntity.ok(orderService.getRevenueChartData(startDate, endDate, days));
     }
     
     @GetMapping("/growth")

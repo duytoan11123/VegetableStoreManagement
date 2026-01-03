@@ -1,6 +1,3 @@
-# Conversion to YAML from Properties formar report
-# Warnings:
-# - The yaml file had comments which are lost in the refactoring!
 server:
   port: 8080
 spring:
@@ -41,6 +38,18 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: http://localhost:8090/realms/spring-boot-realm/protocol/openid-connect/certs
+      # BẮT ĐẦU PHẦN CẤU HÌNH CLIENT BỔ SUNG
+      client:
+        registration:
+          keycloak:
+            client-id: apigateway-client 
+            client-secret: lYPJVwtldNdB5BTRsLRDLbY9e1BV28vR # Secret của bạn
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8090/realms/spring-boot-realm
+      # KẾT THÚC PHẦN CẤU HÌNH CLIENT BỔ SUNG
 eureka:
   client:
     register-with-eureka: true

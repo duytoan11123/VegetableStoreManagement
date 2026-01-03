@@ -1,253 +1,356 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthProvider';
-import { X, PlusCircle, Loader2, Edit } from 'lucide-react';
-import { Supplier } from '../../type/Supplier.types'; // Import kiểu Supplier
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthProvider";
+import { X, PlusCircle, Loader2, Edit } from "lucide-react";
+import { Supplier } from "../../type/Supplier.types"; // Import kiểu Supplier
 
 // DTO cho Backend (Giả định)
 interface SupplierRequestData {
-    name: string;
-    contactPerson: string;
-    phone: string;
-    email: string;
-    address: string;
+  name: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  address: string;
+  description?: string;
 }
 
 // Props cho component
 interface AddSupplierModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccessRefresh: () => void; 
-    supplierToEdit: Supplier | null; // Dữ liệu NCC cần sửa
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccessRefresh: () => void;
+  supplierToEdit: Supplier | null; // Dữ liệu NCC cần sửa
 }
 
 // Kiểu dữ liệu state của Form
 interface FormData {
-    name: string;
-    contactPerson: string;
-    phone: string;
-    email: string;
-    address: string;
+  name: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  address: string;
+  description: string;
 }
 
-const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ 
-    isOpen, 
-    onClose, 
-    onSuccessRefresh, 
-    supplierToEdit 
+const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccessRefresh,
+  supplierToEdit,
 }) => {
-    const { token } = useAuth();
-    
-    const isEditMode = supplierToEdit !== null;
+  const { token } = useAuth();
 
-    const [formData, setFormData] = useState<FormData>({
-        name: '', contactPerson: '', phone: '', email: '', address: '',
-    });
-    
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [isLoading, setIsLoading] = useState(false);
-    const [submitError, setSubmitError] = useState<string | null>(null);
+  const isEditMode = supplierToEdit !== null;
 
-    // useEffect để điền dữ liệu (pre-populate) khi Sửa
-    useEffect(() => {
-        if (isOpen) {
-            if (isEditMode && supplierToEdit) {
-                // Chế độ Sửa: Điền form
-                setFormData({
-                    name: supplierToEdit.name,
-                    contactPerson: supplierToEdit.contactPerson,
-                    phone: supplierToEdit.phone,
-                    email: supplierToEdit.email,
-                    address: supplierToEdit.address,
-                });
-            } else {
-                // Chế độ Thêm: Reset form
-                setFormData({
-                    name: '', contactPerson: '', phone: '', email: '', address: '',
-                });
-            }
-            setSubmitError(null);
-            setErrors({});
-        }
-    }, [isOpen, isEditMode, supplierToEdit]); 
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    contactPerson: "",
+    phone: "",
+    email: "",
+    address: "",
+    description: "",
+  });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: '' }));
-        }
-    };
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-    // Validation
-    const validateForm = (): boolean => {
-        const newErrors: Record<string, string> = {};
-        if (!formData.name) newErrors.name = 'Tên NCC không được để trống.';
-        if (!formData.contactPerson) newErrors.contactPerson = 'Tên người liên hệ không được để trống.';
-        if (!formData.phone) newErrors.phone = 'SĐT không được để trống.';
-        if (!formData.email) newErrors.email = 'Email không được để trống.';
-        
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+  // useEffect để điền dữ liệu (pre-populate) khi Sửa
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditMode && supplierToEdit) {
+        // Chế độ Sửa: Điền form
+        setFormData({
+          name: supplierToEdit.name,
+          contactPerson: supplierToEdit.contactPerson,
+          phone: supplierToEdit.phone,
+          email: supplierToEdit.email,
+          address: supplierToEdit.address,
+          description: supplierToEdit.description || "",
+        });
+      } else {
+        // Chế độ Thêm: Reset form
+        setFormData({
+          name: "",
+          contactPerson: "",
+          phone: "",
+          email: "",
+          address: "",
+          description: "",
+        });
+      }
+      setSubmitError(null);
+      setErrors({});
+    }
+  }, [isOpen, isEditMode, supplierToEdit]);
 
-    // Hàm Submit (POST hoặc PUT)
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSubmitError(null); 
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
 
-        if (!validateForm()) return; 
+  // Validation
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name) newErrors.name = "Tên NCC không được để trống.";
+    if (!formData.contactPerson)
+      newErrors.contactPerson = "Tên người liên hệ không được để trống.";
+    if (!formData.phone) newErrors.phone = "SĐT không được để trống.";
+    if (!formData.email) newErrors.email = "Email không được để trống.";
 
-        setIsLoading(true);
-        const backendApiUrl = process.env.NEXT_PUBLIC_BACK_END_API || 'http://localhost:8080/api';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-        const method = isEditMode ? 'PUT' : 'POST';
-        const apiUrl = isEditMode 
-            ? `${backendApiUrl}/suppliers/${supplierToEdit?.id}` 
-            : `${backendApiUrl}/suppliers`;
+  // Hàm Submit (POST hoặc PUT)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
 
-        const requestBody: SupplierRequestData = { ...formData };
+    if (!validateForm()) return;
 
+    setIsLoading(true);
+    const backendApiUrl =
+      process.env.NEXT_PUBLIC_BACK_END_API || "http://localhost:8080/api";
+
+    const method = isEditMode ? "PUT" : "POST";
+    const apiUrl = isEditMode
+      ? `${backendApiUrl}/suppliers/${supplierToEdit?.id}`
+      : `${backendApiUrl}/suppliers`;
+
+    const requestBody: SupplierRequestData = { ...formData };
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `Lỗi ${response.status}`;
         try {
-            const response = await fetch(apiUrl, {
-                method: method, 
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody), 
-            });
-
-            if (!response.ok) {
-                let errorMessage = `Lỗi ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
-                } catch (jsonError) { /* Bỏ qua */ }
-                throw new Error(errorMessage);
-            }
-            onSuccessRefresh(); 
-            onClose(); 
-        } catch (err: any) {
-            setSubmitError(err.message);
-        } finally {
-            setIsLoading(false);
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (jsonError) {
+          /* Bỏ qua */
         }
-    };
+        throw new Error(errorMessage);
+      }
+      onSuccessRefresh();
+      onClose();
+    } catch (err: any) {
+      setSubmitError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 transition-opacity">
-            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 m-4">
-                <button 
-                    onClick={onClose} 
-                    disabled={isLoading}
-                    className="hover:cursor-pointer absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition disabled:opacity-50"
-                >
-                    <X className="w-6 h-6" />
-                </button>
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 transition-opacity">
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 m-4">
+        <button
+          onClick={onClose}
+          disabled={isLoading}
+          className="hover:cursor-pointer absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition disabled:opacity-50"
+        >
+          <X className="w-6 h-6" />
+        </button>
 
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                    {isEditMode ? <Edit className="w-6 h-6 mr-3 text-blue-600" /> : <PlusCircle className="w-6 h-6 mr-3 text-green-600" />}
-                    {isEditMode ? 'Sửa Nhà Cung Cấp' : 'Thêm Nhà Cung Cấp'}
-                </h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+          {isEditMode ? (
+            <Edit className="w-6 h-6 mr-3 text-blue-600" />
+          ) : (
+            <PlusCircle className="w-6 h-6 mr-3 text-green-600" />
+          )}
+          {isEditMode ? "Sửa Nhà Cung Cấp" : "Thêm Nhà Cung Cấp"}
+        </h2>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">Tên Nhà Cung Cấp</label>
-                        <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            className={`text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-                        />
-                        {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
-                    </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Tên Nhà Cung Cấp
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className={`text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.name && (
+              <p className="text-xs text-red-600 mt-1">{errors.name}</p>
+            )}
+          </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="contactPerson" className="block text-sm font-medium text-gray-700">Người liên hệ</label>
-                            <input
-                                type="text"
-                                id="contactPerson"
-                                name="contactPerson"
-                                value={formData.contactPerson}
-                                onChange={handleChange}
-                                className={`text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm ${errors.contactPerson ? 'border-red-500' : 'border-gray-300'}`}
-                            />
-                            {errors.contactPerson && <p className="text-xs text-red-600 mt-1">{errors.contactPerson}</p>}
-                        </div>
-                        <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Số điện thoại</label>
-                            <input
-                                type="tel"
-                                id="phone"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
-                                className={`text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
-                            />
-                            {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            className={`text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
-                        />
-                        {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
-                    </div>
-
-                    <div>
-                        <label htmlFor="address" className="block text-sm font-medium text-gray-700">Địa chỉ</label>
-                        <textarea
-                            id="address"
-                            name="address"
-                            value={formData.address}
-                            onChange={handleChange}
-                            rows={3}
-                            className="text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm border-gray-300"
-                        />
-                    </div>
-                    
-                    {submitError && (
-                        <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{submitError}</p>
-                    )}
-
-                    <div className="pt-4 flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            disabled={isLoading}
-                            className="hover:cursor-pointer px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition"
-                        >
-                            Hủy
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className={`hover:cursor-pointer px-4 py-2 text-white rounded-lg font-medium flex items-center disabled:opacity-70 
-                                ${isEditMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
-                        >
-                            {isLoading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : (isEditMode ? <Edit className="w-5 h-5 mr-2" /> : <PlusCircle className="w-5 h-5 mr-2" />)}
-                            {isLoading ? (isEditMode ? 'Đang cập nhật...' : 'Đang thêm...') : (isEditMode ? 'Lưu Thay Đổi' : 'Thêm NCC')}
-                        </button>
-                    </div>
-                </form>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="contactPerson"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Người liên hệ
+              </label>
+              <input
+                type="text"
+                id="contactPerson"
+                name="contactPerson"
+                value={formData.contactPerson}
+                onChange={handleChange}
+                className={`text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm ${
+                  errors.contactPerson ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.contactPerson && (
+                <p className="text-xs text-red-600 mt-1">
+                  {errors.contactPerson}
+                </p>
+              )}
             </div>
-        </div>
-    );
+            <div>
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Số điện thoại
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className={`text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm ${
+                  errors.phone ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.phone && (
+                <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className={`text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm ${
+                errors.email ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.email && (
+              <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="address"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Địa chỉ
+            </label>
+            <textarea
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              rows={3}
+              className="text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm border-gray-300"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Mô tả
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Mô tả các loại trái cây hoặc hàng hóa mà NCC cung cấp"
+              className="text-gray-500 mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm border-gray-300"
+            />
+          </div>
+
+          {submitError && (
+            <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+              {submitError}
+            </p>
+          )}
+
+          <div className="pt-4 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isLoading}
+              className="hover:cursor-pointer px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`hover:cursor-pointer px-4 py-2 text-white rounded-lg font-medium flex items-center disabled:opacity-70 
+                                ${
+                                  isEditMode
+                                    ? "bg-blue-600 hover:bg-blue-700"
+                                    : "bg-green-600 hover:bg-green-700"
+                                }`}
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : isEditMode ? (
+                <Edit className="w-5 h-5 mr-2" />
+              ) : (
+                <PlusCircle className="w-5 h-5 mr-2" />
+              )}
+              {isLoading
+                ? isEditMode
+                  ? "Đang cập nhật..."
+                  : "Đang thêm..."
+                : isEditMode
+                ? "Lưu Thay Đổi"
+                : "Thêm NCC"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default AddSupplierModal;

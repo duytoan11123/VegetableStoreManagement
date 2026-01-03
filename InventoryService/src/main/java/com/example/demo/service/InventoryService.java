@@ -20,13 +20,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Instant; // 👈 (THÊM MỚI)
 import java.time.LocalDateTime;
-import java.util.ArrayList; // 👈 (THÊM MỚI)
+import java.util.ArrayList; 
 import java.util.List; 
 import java.util.Map; 
 import java.util.stream.Collectors; 
-
 
 @Service
 @Transactional 
@@ -36,11 +34,19 @@ public class InventoryService {
     private InventoryRepository inventoryRepository;
     @Autowired
     private CategoryRepository categoryRepository; 
+    
     @Autowired
     private RestTemplate restTemplate;
 
     @Value("${supplier.service.name:supplier-service}")
     private String supplierServiceName;
+
+    @Transactional(readOnly = true)
+    public List<InventoryItem> getItemsBySupplier(Long supplierId) {
+
+        return inventoryRepository.findBySupplierId(supplierId);
+    }
+
     @Transactional(readOnly = true) 
     public Page<InventoryResponseDTO> getAllItems(String search, Long categoryId, Pageable pageable) {
         Page<InventoryItem> inventoryData = inventoryRepository.findAllWithCategory(search, categoryId, pageable);
@@ -70,6 +76,8 @@ public class InventoryService {
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }
+
+    // --- Code của Team Leader: Lấy toàn bộ danh sách (List) ---
     @Transactional(readOnly = true)
     public List<InventoryResponseDTO> getAllItemsList() {
         return inventoryRepository.findAll()
@@ -77,6 +85,7 @@ public class InventoryService {
                 .map(this::mapToInventoryDTO)
                 .collect(Collectors.toList());
     }
+    
     @Transactional
     public InventoryResponseDTO addFruit(CreateItemRequest request) {
         if (inventoryRepository.findByName(request.getName()).isPresent()) {
@@ -88,8 +97,9 @@ public class InventoryService {
         newItem.setQuantity(request.getQuantity());
         newItem.setPrice(request.getPrice());
         newItem.setSupplierId(request.getSupplierId());
-        if (request.getQuantity() ==0) {
-        	newItem.setStatus(STATUS.SOLDOUT);
+        
+        if (request.getQuantity() == 0) {
+            newItem.setStatus(STATUS.SOLDOUT);
         }
         else if (request.getQuantity() < 50) {
             newItem.setStatus(STATUS.LOW);
@@ -120,7 +130,8 @@ public class InventoryService {
         itemToUpdate.setPrice(request.getPrice());
         itemToUpdate.setSupplierId(request.getSupplierId());
         itemToUpdate.setCategory(category); 
-        if (request.getQuantity() ==0) {
+        
+        if (request.getQuantity() == 0) {
              itemToUpdate.setStatus(STATUS.SOLDOUT);
         } else if (request.getQuantity() < 50) {
             itemToUpdate.setStatus(STATUS.LOW);
@@ -150,9 +161,15 @@ public class InventoryService {
                 item.setQuantity(newQuantity);
                 item.setPrice(importItem.price()); 
                 
-                if (newQuantity < 10) item.setStatus(STATUS.SOLDOUT);
-                else if (newQuantity < 50) item.setStatus(STATUS.LOW);
-                else item.setStatus(STATUS.AVAILABLE);
+                if (newQuantity == 0) {
+                    item.setStatus(STATUS.SOLDOUT);
+                } else if (newQuantity < 50) {
+                    item.setStatus(STATUS.LOW);
+                } else {
+                    item.setStatus(STATUS.AVAILABLE);
+                }
+                
+                // Tạo Request gửi sang Supplier Service
                 ImportHistoryRequest req = new ImportHistoryRequest();
                 req.setSupplierId(item.getSupplierId());
                 req.setItemId(item.getId());
@@ -178,33 +195,34 @@ public class InventoryService {
     }
     
     public InventoryItem updateStock(Long id, UpdateStockRequest request) {
-		InventoryItem item = inventoryRepository.findById(id)
-	            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Item (để cập nhật kho) với ID: " + id));
+        InventoryItem item = inventoryRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Item (để cập nhật kho) với ID: " + id));
 
-	        int newQuantity = request.getNewQuantity();
-	        item.setQuantity(newQuantity);
-	        
-	        // Cập nhật lại Status
-	        if (newQuantity == 0) {
-	             item.setStatus(STATUS.SOLDOUT);
-	        } else if (newQuantity < 50) {
-	            item.setStatus(STATUS.LOW);
-	        } else {
-	            item.setStatus(STATUS.AVAILABLE);
-	        }
-	        return inventoryRepository.save(item);
-	}
+            int newQuantity = request.getNewQuantity();
+            item.setQuantity(newQuantity);
+            
+            if (newQuantity == 0) {
+                 item.setStatus(STATUS.SOLDOUT);
+            } else if (newQuantity < 50) {
+                item.setStatus(STATUS.LOW);
+            } else {
+                item.setStatus(STATUS.AVAILABLE);
+            }
+            return inventoryRepository.save(item);
+    }
     
     @Transactional(readOnly=true)
     public Page<InventoryResponseDTO> getLowStockItem(Pageable pageable){
-    	Page<InventoryItem> itemData= inventoryRepository.getLowStockItem(pageable);
-    	return itemData.map(this::mapToInventoryDTO);
+        Page<InventoryItem> itemData= inventoryRepository.getLowStockItem(pageable);
+        return itemData.map(this::mapToInventoryDTO);
     }
     
     @Transactional(readOnly=true)
     public int getTotalQuantity() {
-    	return inventoryRepository.getTotalQuantity();
+        return inventoryRepository.getTotalQuantity();
     }
+
+   
     private InventoryResponseDTO mapToInventoryDTO(InventoryItem data) {
         InventoryResponseDTO a = new InventoryResponseDTO();
         a.setId(data.getId());
@@ -212,6 +230,8 @@ public class InventoryService {
         a.setPrice(data.getPrice());
         a.setQuantity(data.getQuantity());
         a.setSupplierId(data.getSupplierId());
+        a.setAddedDate(data.getCreatedAt()); 
+
         if (data.getCategory() != null) {
             a.setCategoryName(data.getCategory().getName());
         }
@@ -220,6 +240,4 @@ public class InventoryService {
         }
         return a;
     }
-    
-
 }

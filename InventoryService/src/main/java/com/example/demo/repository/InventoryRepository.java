@@ -14,7 +14,8 @@ import java.util.Optional;
 @Repository
 public interface InventoryRepository extends JpaRepository<InventoryItem, Long> {
     Optional<InventoryItem> findByName(String name);
-    List<InventoryItem> findBySupplierId(Long supplierId);
+   @Query("SELECT i FROM InventoryItem i WHERE i.supplierId = :supplierId ORDER BY i.createdAt DESC")
+    List<InventoryItem> findBySupplierIdForHistory(@Param("supplierId") Long supplierId);
     
     
     @Query(value = "SELECT i FROM InventoryItem i LEFT JOIN FETCH i.category c " +
@@ -45,6 +46,7 @@ public interface InventoryRepository extends JpaRepository<InventoryItem, Long> 
         Pageable pageable
     );
     
+    
     @Query("SELECT i FROM InventoryItem i LEFT JOIN FETCH i.category c WHERE i.id = :id")
     Optional<InventoryItem> findByIdWithCategory(@Param("id") Long id);
     
@@ -54,4 +56,6 @@ public interface InventoryRepository extends JpaRepository<InventoryItem, Long> 
     @Query(value = "SELECT i FROM InventoryItem i LEFT JOIN FETCH i.category c WHERE i.status = 'LOW' OR i.status = 'SOLDOUT'",
             countQuery = "SELECT count(i) FROM InventoryItem i WHERE i.status = 'LOW' OR i.status = 'SOLDOUT'")
      Page<InventoryItem> getLowStockItem(Pageable pageable);
+
+     List<InventoryItem> findBySupplierId(Long supplierId);
 }

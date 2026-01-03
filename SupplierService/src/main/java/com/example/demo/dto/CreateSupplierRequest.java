@@ -11,4 +11,5 @@ public class CreateSupplierRequest {
     private String email;
     private String phone;
     private String address;
+    private String description;
 }
